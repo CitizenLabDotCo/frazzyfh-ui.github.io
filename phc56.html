@@ -1,0 +1,3411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planhat — Customer Accounts</title>
+<style>
+  :root {
+    --bg:        #0a1428;
+    --panel:     #111f3a;
+    --panel-2:   #16264a;
+    --border:    #24365c;
+    --text:      #e8edf7;
+    --muted:     #8fa0bf;
+    --accent:    #2dd4a7;   /* Planhat-ish green */
+    --accent-dk: #1a9d7a;
+    --amber:     #f5b83d;
+    --red:       #f2695c;
+    --blue:      #5aa7f0;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding-bottom: 4rem;
+  }
+  a { color: var(--accent); }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap;
+    padding: 1.1rem 1.5rem .9rem;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 1.15rem; margin: 0; letter-spacing: .01em; }
+  header h1 .ph { color: var(--accent); }
+  header .sub { color: var(--muted); font-size: .85rem; }
+
+  main { padding: 1.25rem 1.5rem; max-width: 1400px; margin: 0 auto; }
+
+  /* ---------- Panels ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.15rem;
+    margin-bottom: 1rem;
+  }
+  .panel h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em;
+              color: var(--muted); margin: 0 0 .75rem; font-weight: 600; }
+
+  /* ---------- Forms ---------- */
+  label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
+  input[type="text"], input[type="password"], input[type="search"], select, textarea {
+    width: 100%;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: .5rem .65rem;
+    font: inherit;
+  }
+  textarea { resize: vertical; font-family: var(--mono); font-size: .78rem; line-height: 1.4; }
+  textarea.masked { color: transparent; text-shadow: 0 0 6px var(--muted); caret-color: var(--muted); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible,
+  th[tabindex]:focus-visible, .rowbtn:focus-visible {
+    outline: 3px solid var(--amber);
+    outline-offset: 1px;
+  }
+  .querybar { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+  .query {
+    flex: 1; min-width: 260px;
+    font-family: var(--mono); font-size: .8rem; color: #b9c6e0;
+    background: #0d1830; border: 1px solid var(--border); border-radius: 6px;
+    padding: .5rem .65rem; overflow-wrap: anywhere;
+  }
+  .hint { font-size: .78rem; color: var(--muted); margin-top: .3rem; }
+  .keywrap { display: flex; gap: .4rem; margin-top: .1rem; }
+  .keywrap input { flex: 1; }
+
+  button {
+    font: inherit; font-weight: 600;
+    border: 1px solid transparent; border-radius: 6px;
+    padding: .55rem 1.1rem; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: #06291f; }
+  .btn-primary:hover { background: var(--accent-dk); color: #fff; }
+  .btn-primary[disabled] { opacity: .5; cursor: default; }
+  .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+  .btn-ghost:hover { background: var(--panel-2); }
+  .btn-sm { padding: .35rem .7rem; font-size: .82rem; }
+
+  /* ---------- Status line ---------- */
+  #statusLine { font-size: .85rem; color: var(--muted); min-height: 1.4em; margin: .25rem 0 1rem .15rem; }
+  #statusLine.err { color: var(--red); }
+  #statusLine.ok  { color: var(--accent); }
+
+  /* ---------- Summary chips ---------- */
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+  .chip {
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--panel); color: var(--text);
+    padding: .3rem .85rem; font-size: .82rem; cursor: pointer;
+  }
+  .chip .n { font-family: var(--mono); color: var(--accent); margin-left: .35rem; }
+  .chip[aria-pressed="true"] { background: var(--accent); color: #06291f; border-color: var(--accent); }
+  .chip[aria-pressed="true"] .n { color: #06291f; }
+
+  /* ---------- Filter bar ---------- */
+  .filters {
+    display: grid; gap: .9rem;
+    grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(140px, 1fr)) auto;
+    align-items: end;
+  }
+  @media (max-width: 1000px) { .filters { grid-template-columns: 1fr 1fr; } }
+
+  /* ---------- Table ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+  .acct-toolbar { display: flex; gap: 1rem; align-items: center; margin-bottom: .7rem; flex-wrap: wrap; }
+  .acct-toolbar .chk { display: inline-flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--muted); cursor: pointer; }
+  .acct-toolbar .chk input { cursor: pointer; }
+  table { border-collapse: collapse; width: 100%; min-width: 900px; font-size: .88rem; }
+  thead th {
+    position: sticky; top: 0;
+    background: var(--panel-2);
+    text-align: left; font-weight: 600; font-size: .78rem;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+    padding: .6rem .75rem; border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  thead th .arrow { color: var(--accent); margin-left: .3rem; }
+  tbody td { padding: .55rem .75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--panel-2); }
+  td.num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+  td .name { font-weight: 600; }
+  .lic-tag { font-weight: 400; font-size: .76rem; color: var(--muted); font-family: var(--mono); }
+  a.co-link { color: inherit; text-decoration: none; font-weight: 600; cursor: pointer; }
+  a.co-link:hover { color: var(--accent); text-decoration: underline; }
+  td .domains { display: block; font-size: .76rem; color: var(--muted); }
+
+  .pill {
+    display: inline-block; border-radius: 999px;
+    padding: .1rem .6rem; font-size: .74rem; font-weight: 600;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .pill.customer  { background: rgba(45,212,167,.15); color: var(--accent); border-color: rgba(45,212,167,.4); }
+  .pill.prospect  { background: rgba(90,167,240,.15); color: var(--blue);   border-color: rgba(90,167,240,.4); }
+  .pill.churned, .pill.lost { background: rgba(242,105,92,.15); color: var(--red); border-color: rgba(242,105,92,.4); }
+  .pill.other     { background: rgba(143,160,191,.15); color: var(--muted); border-color: rgba(143,160,191,.4); }
+
+  .rowbtn {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 4px; font-size: .72rem; padding: .1rem .45rem; cursor: pointer;
+  }
+  tr.detail td {
+    background: #0d1830; font-family: var(--mono); font-size: .75rem;
+    white-space: pre-wrap; word-break: break-word; color: #b9c6e0;
+  }
+
+  .empty { padding: 2.5rem 1rem; text-align: center; color: var(--muted); }
+
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--border); margin-bottom: 1rem; flex-wrap: wrap; }
+  .tabs[hidden] { display: none; }
+  .tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); padding: .6rem .95rem; font-size: .9rem; font-weight: 600;
+    border-radius: 0; cursor: pointer;
+  }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabpanel[hidden] { display: none; }
+
+  /* ---------- Shared summary bar (reflects active filters) ---------- */
+  .summary {
+    display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: baseline;
+    padding: .85rem 1.15rem; margin-bottom: 1rem;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .summary[hidden] { display: none; }
+  .summary .metric { display: flex; flex-direction: column; gap: .1rem; }
+  .summary .metric .v { font-size: 1.35rem; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+  #mChurned { color: var(--red); }
+  #mChurnedMrr { color: var(--red); }
+  .growth-toggle {
+    margin-left: auto; align-self: center; background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px; font-size: .78rem; font-weight: 600;
+    padding: .35rem .8rem; cursor: pointer;
+  }
+  .growth-toggle[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  .summary.growth-row { margin-top: -.6rem; }
+  #mNetClients.pos, #mNetCash.pos { color: var(--accent); }
+  #mNetClients.neg, #mNetCash.neg { color: var(--red); }
+  .summary .metric .k { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .summary .scope { margin-left: auto; font-size: .8rem; color: var(--muted); align-self: center; }
+
+  /* ---------- Quarter toggle + grid ---------- */
+  .yeartoggle { display: flex; gap: .3rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .yeartoggle button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-size: .82rem; padding: .4rem .8rem;
+  }
+  .yeartoggle button[aria-pressed="true"] { background: var(--accent); color: #06291f; border-color: var(--accent); }
+
+  td.q-has { color: var(--text); font-weight: 600; }
+  td.q-zero { color: var(--muted); }
+  tr.q-total td { background: #0d1830; border-top: 2px solid var(--border); border-bottom: none; }
+  .barcell { position: relative; }
+  .barcell .bar {
+    position: absolute; left: 0; top: 0; bottom: 0; background: rgba(45,212,167,.14);
+    border-right: 2px solid var(--accent); z-index: 0;
+  }
+  .barcell .lbl { position: relative; z-index: 1; }
+
+  /* ---------- Multi-select dropdown ---------- */
+  .multi { position: relative; }
+  .multi-btn {
+    width: 100%; text-align: left; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: .5rem .65rem;
+    font: inherit; font-weight: 400; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; gap: .5rem;
+  }
+  .multi-btn::after { content: "▾"; color: var(--muted); }
+  .multi-btn .cnt { color: var(--accent); font-family: var(--mono); font-size: .78rem; }
+  .multi-menu {
+    position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; right: 0;
+    max-height: 260px; overflow: auto;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: .35rem; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .multi-menu label {
+    display: flex; align-items: center; gap: .5rem; margin: 0;
+    padding: .35rem .45rem; border-radius: 4px; color: var(--text);
+    font-size: .84rem; text-transform: none; letter-spacing: 0; cursor: pointer;
+  }
+  .multi-menu label:hover { background: var(--panel); }
+  .multi-menu input { accent-color: var(--accent); width: auto; }
+  .multi-menu .multi-actions {
+    display: flex; gap: .5rem; padding: .25rem .45rem .4rem; border-bottom: 1px solid var(--border);
+    margin-bottom: .25rem;
+  }
+  .multi-menu .multi-actions button {
+    background: none; border: none; color: var(--accent); font-size: .78rem; padding: .1rem .2rem; cursor: pointer;
+  }
+
+  /* Renewal detail rows (customers renewing that quarter) */
+  tr.q-detail td { background: #0d1830; padding: 0; border-bottom: 1px solid var(--border); }
+  .q-list { margin: 0; padding: .35rem .75rem .5rem 1.5rem; }
+  .q-list .q-cust {
+    display: flex; justify-content: space-between; gap: 1rem;
+    padding: .2rem 0; font-size: .82rem; border-bottom: 1px dashed rgba(143,160,191,.15);
+  }
+  .q-list .q-cust:last-child { border-bottom: none; }
+  .q-list .q-cust .q-name { color: var(--text); }
+  .q-list .q-cust.q-highval { background: rgba(255,196,80,.09); border-left: 3px solid var(--amber); padding-left: .5rem; }
+  .q-list .q-cust.q-highval .q-name { color: #ffd98a; font-weight: 600; }
+  .q-list .q-cust .q-meta { color: var(--muted); font-family: var(--mono); font-size: .76rem; white-space: nowrap; }
+  .q-toggle {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 4px; font-size: .72rem; padding: .05rem .4rem; cursor: pointer; margin-left: .4rem;
+  }
+  .yeartabs { display: flex; gap: .25rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .yeartabs button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+    font-size: .84rem; font-weight: 600; padding: .4rem .9rem; border-radius: 6px; cursor: pointer;
+  }
+  .yeartabs button[aria-pressed="true"] { background: var(--accent); color: #06291f; border-color: var(--accent); }
+  .yeartabs { margin-bottom: 0; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .seg-btn {
+    background: var(--panel); border: none; color: var(--muted);
+    font-size: .82rem; font-weight: 600; padding: .4rem .9rem; cursor: pointer;
+  }
+  .seg-btn + .seg-btn { border-left: 1px solid var(--border); }
+  .seg-btn.active { background: var(--accent); color: #06291f; }
+
+  /* ---------- Debug log ---------- */
+  details.debug { margin-top: 1rem; }
+  details.debug summary { cursor: pointer; color: var(--muted); font-size: .82rem; }
+  #debugLog {
+    font-family: var(--mono); font-size: .74rem; color: #b9c6e0;
+    background: #0d1830; border: 1px solid var(--border); border-radius: 6px;
+    padding: .75rem; margin-top: .5rem; max-height: 220px; overflow: auto;
+    white-space: pre-wrap;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .chip, button { transition: background .15s ease, color .15s ease; }
+  }
+
+  /* ---------- Customer health drawer ---------- */
+  .drawer-scrim {
+    position: fixed; inset: 0; background: rgba(3,8,20,.65); z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  }
+  .drawer-scrim.open { opacity: 1; pointer-events: auto; }
+  .metric-clickable { cursor: pointer; border-radius: 6px; padding: .1rem .3rem; margin: -.1rem -.3rem; }
+  .metric-clickable:hover { background: var(--panel-2); }
+  .metric-clickable:hover .v { color: var(--accent); }
+  #mChurnedMetric:hover .v { color: var(--red); filter: brightness(1.2); }
+  .modal-scrim { position: fixed; inset: 0; background: rgba(3,8,20,.65); z-index: 60; }
+  .modal-scrim[hidden] { display: none; }
+  .modal[hidden] { display: none; }
+  .modal {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: min(460px, 92vw); max-height: 80vh; z-index: 70;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  }
+  .modal-head { display: flex; align-items: center; gap: 1rem; padding: .9rem 1.1rem; border-bottom: 1px solid var(--border); }
+  .modal-head h2 { margin: 0; font-size: 1.05rem; }
+  .modal-head .close { margin-left: auto; background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; width: 1.9rem; height: 1.9rem; cursor: pointer; font-size: 1.1rem; }
+  .modal-body { padding: .5rem 1.1rem 1rem; overflow: auto; }
+  .modal-body ul { list-style: none; margin: 0; padding: 0; }
+  .modal-body li { padding: .45rem 0; border-bottom: 1px dashed rgba(143,160,191,.15); font-size: .88rem; }
+  .modal-body li:last-child { border-bottom: none; }
+  .modal-body .co-sub { color: var(--muted); font-size: .78rem; font-family: var(--mono); }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 94vw); z-index: 50;
+    background: var(--bg); border-left: 1px solid var(--border);
+    transform: translateX(100%); transition: transform .22s ease;
+    display: flex; flex-direction: column; box-shadow: -12px 0 40px rgba(0,0,0,.5);
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head {
+    display: flex; align-items: flex-start; gap: 1rem; padding: 1.1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .drawer-head h2 { margin: 0; font-size: 1.15rem; }
+  .drawer-head .meta { color: var(--muted); font-size: .82rem; margin-top: .2rem; }
+  .drawer-head .close {
+    margin-left: auto; background: none; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 6px; font-size: 1.1rem; line-height: 1; padding: .3rem .55rem; cursor: pointer;
+  }
+  .drawer-body { overflow-y: auto; padding: 1.1rem 1.25rem 3rem; }
+
+  .mgroup { margin-bottom: 1.4rem; }
+  .mgroup h3 {
+    font-size: .76rem; text-transform: uppercase; letter-spacing: .07em; color: var(--accent);
+    margin: 0 0 .6rem; padding-bottom: .35rem; border-bottom: 1px solid var(--border);
+  }
+  .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .6rem; }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: .6rem .7rem;
+  }
+  .stat .v { font-size: 1.15rem; font-weight: 700; font-family: var(--mono); color: var(--text); }
+  .stat .v.warn { color: var(--amber); }
+  .stat .v.bad { color: var(--red); }
+  .stat .v.good { color: var(--accent); }
+  .stat .k { font-size: .7rem; color: var(--muted); margin-top: .15rem; line-height: 1.3; }
+
+  .breakdown { display: flex; flex-direction: column; gap: .3rem; }
+  .breakdown .row { display: grid; grid-template-columns: 1fr auto; gap: .5rem; align-items: center; font-size: .82rem; }
+  .breakdown .row .bar-wrap { grid-column: 1 / -1; height: 5px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .breakdown .row .bar-fill { height: 100%; background: var(--accent); }
+  .breakdown .row .lbl { color: var(--text); }
+  .breakdown .row .val { color: var(--muted); font-family: var(--mono); font-size: .78rem; }
+
+  .drawer-loading, .drawer-error { padding: 2rem 1rem; text-align: center; color: var(--muted); }
+  .spinner {
+    display: inline-block; width: 26px; height: 26px; margin-bottom: .6rem;
+    border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  .spinner.sm { width: 15px; height: 15px; border-width: 2px; margin: 0 .4rem 0 0; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
+  .load-overlay {
+    display: flex; flex-direction: column; align-items: center; gap: .6rem;
+    padding: 3rem 1rem; color: var(--muted); text-align: center;
+  }
+  .load-overlay[hidden] { display: none; }
+  .drawer-error { color: var(--red); }
+  .note-inline { font-size: .74rem; color: var(--muted); font-style: italic; margin-top: .3rem; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover .name { color: var(--accent); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="ph">Planhat</span> Customer Accounts</h1>
+  <span class="sub">Read-only view of companies via the Planhat API</span>
+  <button type="button" class="btn-ghost btn-sm" id="reconnectBtn" style="margin-left:auto" hidden>Reconnect</button>
+</header>
+
+<main>
+
+  <!-- Connect screen: only shown when the API can't connect / a cookie is needed -->
+  <section class="panel" id="connectScreen" aria-labelledby="qryH" hidden>
+    <h2 id="qryH">Connect to Planhat</h2>
+    <p class="hint" id="connectIntro" style="margin:.2rem 0 .75rem">Paste a current session cookie to load your accounts. The saved cookie expires when your Planhat session does — if the table stops loading, come back here and paste a fresh one.</p>
+    <div class="querybar">
+      <code class="query" id="queryShown">GET https://api.planhat.com/companies?limit=2000&amp;offset=0&amp;sort=name</code>
+      <button type="button" class="btn-primary btn-sm" id="loadBtn">Run</button>
+    </div>
+    <p class="hint" style="margin-top:.6rem">No API token yet? <label for="csvFile" style="display:inline;color:var(--accent);cursor:pointer;text-decoration:underline">Load a CSV exported from Planhat</label> instead — same table, no connection needed.
+    <input type="file" id="csvFile" accept=".csv,text/csv" hidden></p>
+    <div style="margin-top:.75rem">
+      <label for="cookieVal">Session cookie</label>
+      <textarea id="cookieVal" rows="3" autocomplete="off" spellcheck="false"
+               placeholder="Paste the Cookie header from a logged-in api.planhat.com request"></textarea>
+      <div style="display:flex;gap:.4rem;margin-top:.4rem">
+        <button type="button" class="btn-ghost btn-sm" id="toggleCookie" aria-pressed="false">Show</button>
+        <button type="button" class="btn-ghost btn-sm" id="saveCookie">Save &amp; run</button>
+      </div>
+      <p class="hint">In your logged-in Planhat tab: DevTools (F12) → Network tab → click a request to <code>api.planhat.com</code> → Request headers → copy the entire <code>Cookie:</code> value. Everything before <code>phAuth-citizenlab=</code> is stripped automatically.</p>
+    </div>
+  </section>
+  <p id="statusLine" role="status" aria-live="polite"></p>
+  <div id="loadingOverlay" class="load-overlay" hidden>
+    <div class="spinner"></div>
+    <div id="loadingText">Loading customer accounts…</div>
+  </div>
+
+  <!-- Filters (shared across all tabs) -->
+  <section class="panel" id="filterPanel" aria-labelledby="filtH" hidden>
+    <h2 id="filtH">Filters (apply to every tab)</h2>
+    <div class="filters">
+      <div>
+        <label for="q">Search name or domain</label>
+        <input type="search" id="q" placeholder="e.g. Acme">
+      </div>
+      <div>
+        <label for="fStatusBtn">Status</label>
+        <div class="multi" id="fStatusWrap">
+          <button type="button" class="multi-btn" id="fStatusBtn" aria-haspopup="true" aria-expanded="false">All statuses</button>
+          <div class="multi-menu" id="fStatusMenu" hidden role="group" aria-label="Select statuses"></div>
+        </div>
+      </div>
+      <div>
+        <label for="fPhase">Phase</label>
+        <select id="fPhase"><option value="">All phases</option></select>
+      </div>
+      <div>
+        <label for="fCsmBtn">CSM portfolio</label>
+        <div class="multi" id="fCsmWrap">
+          <button type="button" class="multi-btn" id="fCsmBtn" aria-haspopup="true" aria-expanded="false">All CSMs</button>
+          <div class="multi-menu" id="fCsmMenu" hidden role="group" aria-label="Select CSMs"></div>
+        </div>
+      </div>
+      <div>
+        <label for="fLocale">Country locale</label>
+        <select id="fLocale"><option value="">All locales</option></select>
+      </div>
+      <div>
+        <label for="fRange">Health data range</label>
+        <select id="fRange" title="Scopes the conversation data fetched for customer health stats">
+          <option value="30">Last 30 days</option>
+          <option value="60">Last 60 days</option>
+          <option value="90" selected>Last 90 days</option>
+          <option value="180">Last 6 months</option>
+          <option value="365">Last 12 months</option>
+          <option value="0">Forever</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div id="customRangeWrap" style="display:none">
+        <label for="rangeFrom">From / to</label>
+        <div style="display:flex;gap:.35rem">
+          <input type="date" id="rangeFrom">
+          <input type="date" id="rangeTo">
+        </div>
+      </div>
+      <div>
+        <button type="button" class="btn-ghost" id="csvBtn">Export CSV</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live summary of the filtered set -->
+  <div class="summary" id="summary" hidden>
+    <div class="metric"><span class="v" id="mAccounts">0</span><span class="k">Accounts</span></div>
+    <div class="metric"><span class="v" id="mLicences">0</span><span class="k">Active licences</span></div>
+    <div class="metric"><span class="v" id="mMrr">0</span><span class="k">Total MRR</span></div>
+    <div class="metric"><span class="v" id="mHealth">0</span><span class="k">Avg health</span></div>
+    <div class="metric"><span class="v" id="mCsms">0</span><span class="k">CSMs</span></div>
+    <div class="metric metric-clickable" id="mChurnedMetric" role="button" tabindex="0" title="Click to see which accounts churned this year"><span class="v" id="mChurned">0</span><span class="k">Churned (YTD)</span></div>
+    <div class="metric"><span class="v" id="mChurnedMrr">0</span><span class="k">Churned (MRR)</span></div>
+    <button type="button" class="growth-toggle" id="growthToggle" aria-expanded="false" aria-controls="growthRow">Growth ▸</button>
+    <span class="scope" id="scopeNote"></span>
+  </div>
+
+  <div class="summary growth-row" id="growthRow" hidden>
+    <div class="metric metric-clickable" id="mNewMetric" role="button" tabindex="0" title="Click to see which accounts were newly gained this year"><span class="v" id="mNew">0</span><span class="k">New (YTD)</span></div>
+    <div class="metric"><span class="v" id="mNewMrr">0</span><span class="k">New sales (MRR)</span></div>
+    <div class="metric metric-clickable" id="mUpsellMetric" role="button" tabindex="0" title="Click to see this year's upsells/expansions"><span class="v" id="mUpsellMrr">0</span><span class="k">Upsells (YTD)</span></div>
+    <div class="metric"><span class="v" id="mNetClients">0</span><span class="k">Net clients (YTD)</span></div>
+    <div class="metric"><span class="v" id="mNetCash">0</span><span class="k">Net MRR (YTD)</span></div>
+  </div>
+
+
+  <!-- Tab navigation -->
+  <div class="tabs" id="tabs" role="tablist" hidden>
+    <button class="tab" role="tab" id="tab-accounts"   aria-selected="true"  aria-controls="panel-accounts">Accounts</button>
+    <button class="tab" role="tab" id="tab-renewals"   aria-selected="false" aria-controls="panel-renewals">Renewals by quarter</button>
+    <button class="tab" role="tab" id="tab-portfolios" aria-selected="false" aria-controls="panel-portfolios">CSM portfolios</button>
+    <button class="tab" role="tab" id="tab-trends"     aria-selected="false" aria-controls="panel-trends">Trends</button>
+    <button class="tab" role="tab" id="tab-strategy"   aria-selected="false" aria-controls="panel-strategy">Strategy sessions</button>
+    <button class="tab" role="tab" id="tab-support"    aria-selected="false" aria-controls="panel-support">Support</button>
+    <button class="tab" role="tab" id="tab-activity"   aria-selected="false" aria-controls="panel-activity">Activity</button>
+  </div>
+
+  <!-- Tab: Accounts -->
+  <section class="tabpanel" id="panel-accounts" role="tabpanel" aria-labelledby="tab-accounts" hidden>
+    <div class="acct-toolbar">
+      <label class="chk"><input type="checkbox" id="hideExtra"> Hide add-on / upsell licences (extra)</label>
+    </div>
+    <div class="tablewrap" id="tablewrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th data-key="name"        tabindex="0">Company</th>
+            <th data-key="_lictype"    tabindex="0" title="Whether this licence is the main subscription or an add-on/upsell">Type</th>
+            <th data-key="_csm"        tabindex="0">CSM</th>
+            <th data-key="_locale"     tabindex="0">Locale</th>
+            <th data-key="status"      tabindex="0">Status</th>
+            <th data-key="phase"       tabindex="0">Phase</th>
+            <th data-key="h"           tabindex="0" title="Planhat health score">Health</th>
+            <th data-key="mrr"         tabindex="0">MRR</th>
+            <th data-key="arr"         tabindex="0">ARR</th>
+            <th data-key="renewalDate" tabindex="0">Renewal</th>
+            <th data-key="updatedAt"   tabindex="0">Updated</th>
+            <th aria-label="Row details"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyMsg" hidden>No companies match the current filters.</div>
+  </section>
+
+  <!-- Tab: Renewals by quarter -->
+  <section class="tabpanel" id="panel-renewals" role="tabpanel" aria-labelledby="tab-renewals" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem">
+      <div class="yeartabs" id="yearTabs" role="group" aria-label="Choose renewal year"></div>
+      <div class="seg" role="group" aria-label="Renewal view">
+        <button type="button" class="seg-btn" id="renewDueBtn" aria-pressed="false" title="Every renewal falling in the period, including ones already renewed">All due</button>
+        <button type="button" class="seg-btn active" id="renewOutBtn" aria-pressed="true" title="Only renewals not yet closed — the work still outstanding">Outstanding</button>
+        <button type="button" class="seg-btn" id="renewUpsellBtn" aria-pressed="false" title="Accounts that renewed AND expanded — a new licence whose MRR exceeds the prior renewed licence it replaced">Upsells</button>
+      </div>
+    </div>
+    <div class="tablewrap">
+      <table id="renewalTbl">
+        <thead id="renewalHead"></thead>
+        <tbody id="renewalBody"></tbody>
+      </table>
+    </div>
+    <p class="hint" style="margin-top:.6rem"><strong>All due</strong> shows every renewal falling in each quarter (the full book coming up). <strong>Outstanding</strong> shows only those still to close (excludes already-renewed). Both exclude lost/churned. MRR is the renewing MRR. Respects all filters above.</p>
+  </section>
+
+  <!-- Tab: CSM portfolios -->
+  <section class="tabpanel" id="panel-portfolios" role="tabpanel" aria-labelledby="tab-portfolios" hidden>
+    <div class="tablewrap">
+      <table id="portfolioTbl">
+        <thead>
+          <tr>
+            <th data-pkey="csm"       tabindex="0">CSM portfolio</th>
+            <th data-pkey="accounts"  tabindex="0">Accounts</th>
+            <th data-pkey="mrr"       tabindex="0">Total MRR</th>
+            <th data-pkey="arr"       tabindex="0">Total ARR</th>
+            <th data-pkey="health"    tabindex="0">Avg health</th>
+            <th data-pkey="csmScore"  tabindex="0">Avg CSM score</th>
+            <th data-pkey="renew90"   tabindex="0" title="Renewals due in the next 90 days">Renewals ≤90d</th>
+          </tr>
+        </thead>
+        <tbody id="portfolioBody"></tbody>
+        <tfoot id="portfolioFoot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Strategy sessions -->
+  <section class="tabpanel" id="panel-strategy" role="tabpanel" aria-labelledby="tab-strategy" hidden>
+    <p class="hint" style="margin:0 0 .75rem">Cadence: premium-plan customers (Product = premium) should have a strategy session every 6 months; standard-plan every 12 months. Overdue and upcoming sessions are worked out from each customer's last strategy session, found by scanning their full conversation history. Respects all filters above.</p>
+    <div style="display:flex;gap:.9rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <button type="button" class="btn-primary btn-sm" id="calcStrategyBtn">Calculate sessions</button>
+      <button type="button" class="btn-ghost btn-sm" id="inspectConvBtn" title="Fetch one filtered customer's conversations and dump a sample to the debug log so we can see which field holds the strategy-session tag">Inspect conversation fields</button>
+      <span class="hint" id="strategyStatus" style="margin:0"></span>
+    </div>
+
+    <div id="strategyResults" hidden>
+      <div class="mgroup">
+        <h3 style="color:var(--red)">Overdue a strategy session</h3>
+        <div class="tablewrap">
+          <table id="overdueTbl">
+            <thead>
+              <tr>
+                <th data-okey="name" tabindex="0">Customer</th>
+                <th data-okey="csm" tabindex="0">CSM</th>
+                <th data-okey="plan" tabindex="0">Plan</th>
+                <th data-okey="cadence" tabindex="0">Cadence</th>
+                <th data-okey="last" tabindex="0">Last session</th>
+                <th data-okey="due" tabindex="0">Was due</th>
+                <th data-okey="overdueDays" tabindex="0">Overdue by</th>
+              </tr>
+            </thead>
+            <tbody id="overdueBody"></tbody>
+          </table>
+        </div>
+        <p class="hint" id="overdueEmpty" hidden style="margin-top:.5rem">No customers are overdue a strategy session.</p>
+      </div>
+
+      <div class="mgroup">
+        <h3>Due by quarter — this year &amp; next</h3>
+        <div class="tablewrap">
+          <table id="dueTbl">
+            <thead id="dueHead"></thead>
+            <tbody id="dueBody"></tbody>
+          </table>
+        </div>
+        <p class="hint" style="margin-top:.5rem">Each customer's next session falls due one cadence-period after their last session. Expand a quarter to see who.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: Trends -->
+  <section class="tabpanel" id="panel-trends" role="tabpanel" aria-labelledby="tab-trends" hidden>
+    <p class="hint" style="margin:0 0 .75rem">Workload ranking — how busy each CSM is, weighting onboarding at 3× a renewal. Press <strong>Calculate effort</strong> to fetch conversation volume and factor in customer demand. Respects all filters above.</p>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <button type="button" class="btn-primary btn-sm" id="calcEffortBtn">Calculate effort</button>
+      <span class="hint" id="effortStatus" style="margin:0"></span>
+    </div>
+    <div class="tablewrap">
+      <table id="trendsTbl">
+        <thead>
+          <tr>
+            <th data-tkey="csm"        tabindex="0">CSM</th>
+            <th data-tkey="onboarding" tabindex="0" title="Accounts in an onboarding phase — each counts as 3× a renewal in the workload score">Onboarding</th>
+            <th data-tkey="due90"      tabindex="0">Renewals ≤90d</th>
+            <th data-tkey="due180"     tabindex="0">Renewals ≤180d</th>
+            <th data-tkey="demand"     tabindex="0" title="Average conversations per month across all clients in the portfolio — press Calculate effort">Customer demand</th>
+            <th data-tkey="strategy"   tabindex="0" title="Strategy sessions to deliver in the next 90 days across the portfolio — press Calculate effort">Sessions due ≤90d</th>
+            <th data-tkey="workload"   tabindex="0" title="(Onboarding × 3) + renewals due ≤90d + customer demand + (strategy sessions × 2)">Workload</th>
+          </tr>
+        </thead>
+        <tbody id="trendsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Support -->
+  <section class="tabpanel" id="panel-support" role="tabpanel" aria-labelledby="tab-support" hidden>
+    <p class="hint" style="margin:0 0 .75rem">Ranks accounts by support burden over the selected date range — total support conversations, support per month, the recent spike (last 30 days vs the prior 90-day average), and what share of all their conversations are support. Press <strong>Calculate support</strong> to fetch and rank.</p>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <button type="button" class="btn-primary btn-sm" id="calcSupportBtn">Calculate support</button>
+      <span class="hint" id="supportStatus" style="margin:0"></span>
+    </div>
+    <div class="tablewrap" id="supportWrap" hidden>
+      <table id="supportTbl">
+        <thead>
+          <tr>
+            <th data-skey="name"       tabindex="0">Account</th>
+            <th data-skey="csm"        tabindex="0">CSM</th>
+            <th data-skey="total"      tabindex="0" title="Total support conversations in the selected range">Support total</th>
+            <th data-skey="perMonth"   tabindex="0">Support / month</th>
+            <th data-skey="pct"        tabindex="0" title="Support conversations as a share of all conversations">% support</th>
+            <th data-skey="spike"      tabindex="0" title="Last 30 days vs the prior 90-day monthly average">Spike</th>
+            <th data-skey="maxRun"     tabindex="0" title="Longest run of consecutive support conversations">Longest streak</th>
+            <th data-skey="allConvos"  tabindex="0" title="Total conversations of all types">All convos</th>
+          </tr>
+        </thead>
+        <tbody id="supportBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: Activity -->
+  <section class="tabpanel" id="panel-activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
+    <p class="hint" style="margin:0 0 .75rem">Breaks down all conversations across the filtered accounts by type (notes, emails, calls, strategy sessions, and so on) over the selected date range. Press <strong>Calculate activity</strong> to fetch and tally.</p>
+    <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:1rem;flex-wrap:wrap">
+      <button type="button" class="btn-primary btn-sm" id="calcActivityBtn">Calculate activity</button>
+      <span class="hint" id="activityStatus" style="margin:0"></span>
+    </div>
+    <div id="activitySummary" class="summary" hidden style="margin-bottom:1rem"></div>
+    <div class="tablewrap" id="activityWrap" hidden>
+      <table id="activityTbl">
+        <thead>
+          <tr>
+            <th data-akey="type"     tabindex="0">Conversation type</th>
+            <th data-akey="count"    tabindex="0" title="Total conversations of this type in the selected range">Count</th>
+            <th data-akey="pct"      tabindex="0" title="Share of all conversations">% of all</th>
+            <th data-akey="perMonth" tabindex="0" title="Average per month over the selected range">Per month</th>
+            <th data-akey="accounts" tabindex="0" title="Number of distinct accounts with at least one of this type">Accounts</th>
+            <th style="width:32%">Share</th>
+          </tr>
+        </thead>
+        <tbody id="activityBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="debug">
+    <summary>Debug log</summary>
+    <div id="debugLog" aria-live="off">Ready.</div>
+  </details>
+
+  <!-- Customer health drawer -->
+  <div class="drawer-scrim" id="drawerScrim"></div>
+
+  <!-- Churned-accounts popup -->
+  <div class="modal-scrim" id="churnScrim" hidden></div>
+  <div class="modal" id="churnModal" role="dialog" aria-modal="true" aria-labelledby="churnModalTitle" hidden>
+    <div class="modal-head">
+      <h2 id="churnModalTitle">Churned this year</h2>
+      <button type="button" class="close" id="churnModalClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="churnModalBody"></div>
+  </div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerName" aria-hidden="true">
+    <div class="drawer-head">
+      <div>
+        <h2 id="drawerName">—</h2>
+        <div class="meta" id="drawerMeta"></div>
+      </div>
+      <button type="button" class="close" id="drawerClose" aria-label="Close">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const PROXY = 'https://www.acep.org.uk/planhat-github-proxy.php';   // hardwired: works from any host, incl. GitHub Pages
+  const BASE  = 'https://api.planhat.com';
+  const PAGE_LIMIT = 2000;      // Planhat allows up to 5000 for companies; 2000 keeps payloads sane
+  const HARD_CAP   = 50000;     // safety stop
+
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    queryShown: $('queryShown'), loadBtn: $('loadBtn'), statusLine: $('statusLine'),
+    connectScreen: $('connectScreen'), connectIntro: $('connectIntro'), reconnectBtn: $('reconnectBtn'),
+    csvFile: $('csvFile'), cookieVal: $('cookieVal'), saveCookie: $('saveCookie'),
+    toggleCookie: $('toggleCookie'), fLocale: $('fLocale'),
+    fCsmWrap: $('fCsmWrap'), fCsmBtn: $('fCsmBtn'), fCsmMenu: $('fCsmMenu'),
+    fStatusWrap: $('fStatusWrap'), fStatusBtn: $('fStatusBtn'), fStatusMenu: $('fStatusMenu'),
+    filterPanel: $('filterPanel'), hideExtra: $('hideExtra'),
+    q: $('q'), fPhase: $('fPhase'), csvBtn: $('csvBtn'),
+    tablewrap: $('tablewrap'), tbody: $('tbody'), emptyMsg: $('emptyMsg'),
+    debugLog: $('debugLog'),
+    summary: $('summary'), tabs: $('tabs'),
+    mAccounts: $('mAccounts'), mLicences: $('mLicences'), mMrr: $('mMrr'),
+    mHealth: $('mHealth'), mCsms: $('mCsms'), mChurned: $('mChurned'), scopeNote: $('scopeNote'),
+    mChurnedMetric: $('mChurnedMetric'), mChurnedMrr: $('mChurnedMrr'), churnScrim: $('churnScrim'), churnModal: $('churnModal'),
+    mNewMetric: $('mNewMetric'), mNew: $('mNew'), mNewMrr: $('mNewMrr'),
+    growthToggle: $('growthToggle'), growthRow: $('growthRow'),
+    mUpsellMetric: $('mUpsellMetric'), mUpsellMrr: $('mUpsellMrr'),
+    mNetClients: $('mNetClients'), mNetCash: $('mNetCash'),
+    churnModalClose: $('churnModalClose'), churnModalBody: $('churnModalBody'), churnModalTitle: $('churnModalTitle'),
+    yearTabs: $('yearTabs'), renewalHead: $('renewalHead'), renewalBody: $('renewalBody'),
+    renewDueBtn: $('renewDueBtn'), renewOutBtn: $('renewOutBtn'), renewUpsellBtn: $('renewUpsellBtn'),
+    portfolioBody: $('portfolioBody'), portfolioFoot: $('portfolioFoot'),
+    trendsBody: $('trendsBody'),
+    calcEffortBtn: $('calcEffortBtn'), effortStatus: $('effortStatus'),
+    calcStrategyBtn: $('calcStrategyBtn'),
+    calcSupportBtn: $('calcSupportBtn'), supportStatus: $('supportStatus'),
+    calcActivityBtn: $('calcActivityBtn'), activityStatus: $('activityStatus'),
+    activitySummary: $('activitySummary'), activityWrap: $('activityWrap'), activityBody: $('activityBody'),
+    supportWrap: $('supportWrap'), supportBody: $('supportBody'),
+    strategyStatus: $('strategyStatus'), strategyResults: $('strategyResults'),
+    overdueBody: $('overdueBody'), overdueEmpty: $('overdueEmpty'),
+    dueHead: $('dueHead'), dueBody: $('dueBody'),
+    fRange: $('fRange'), customRangeWrap: $('customRangeWrap'), rangeFrom: $('rangeFrom'), rangeTo: $('rangeTo'),
+    drawer: $('drawer'), drawerScrim: $('drawerScrim'), drawerClose: $('drawerClose'),
+    drawerName: $('drawerName'), drawerMeta: $('drawerMeta'), drawerBody: $('drawerBody'),
+  };
+
+  let selectedCsms = new Set();  // empty = all CSMs
+  let selectedStatuses = new Set();  // empty = all statuses
+
+  let companies = [];                 // raw rows from Planhat
+  let sortKey = 'name', sortDir = 1;  // 1 asc, -1 desc
+
+  // ---------- Utilities ----------
+  const log = (msg) => {
+    const t = new Date().toLocaleTimeString('en-GB');
+    els.debugLog.textContent += `\n[${t}] ${msg}`;
+    els.debugLog.scrollTop = els.debugLog.scrollHeight;
+  };
+  const setStatus = (msg, cls = '') => {
+    els.statusLine.textContent = msg;
+    els.statusLine.className = cls;
+  };
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
+    (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtNum = (v) => {
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    return (v === null || v === undefined || v === '' || isNaN(v))
+      ? '—' : Number(v).toLocaleString('en-GB');
+  };
+  // Money values are in Euros — prefix the € symbol.
+  const fmtEur = (v) => {
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    return (v === null || v === undefined || v === '' || isNaN(v))
+      ? '—' : '€' + Number(v).toLocaleString('en-GB', { maximumFractionDigits: 0 });
+  };
+  const fmtDate = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    return isNaN(d) ? esc(v) : d.toLocaleDateString('en-GB');
+  };
+  const statusClass = (s) => {
+    const k = String(s || '').toLowerCase();
+    if (k === 'customer') return 'customer';
+    if (k === 'prospect') return 'prospect';
+    if (k === 'churned' || k === 'lost' || k === 'canceled' || k === 'cancelled') return 'churned';
+    return 'other';
+  };
+
+  // The account owner (CSM) lives under different keys depending on source:
+  // API records may carry `owner` as a plain user ID, an embedded user object
+  // ({name/nickname/email…}), or an array of such. CSV exports may spell it out.
+  // Pull out a human-readable name from whatever shape is present.
+  const nameFromObj = (o) => {
+    if (o === null || o === undefined) return '';
+    if (typeof o === 'string' || typeof o === 'number') return String(o);
+    if (Array.isArray(o)) return o.map(nameFromObj).filter(Boolean).join(', ');
+    if (typeof o === 'object') {
+      const first = o.firstName || o.givenName || '';
+      const last = o.lastName || o.familyName || '';
+      const full = (first + ' ' + last).trim();
+      return o.name || o.nickName || o.nickname || o.fullName || full || o.email || o.username || '';
+    }
+    return '';
+  };
+  const csmOf = (c) => {
+    const v = c._csm ?? c.ownerName ?? c.owner_name ?? c.csmName ?? c.csm ?? c.owner ?? c.ownerId;
+    const n = nameFromObj(v);
+    return n || '';
+  };
+  const UNASSIGNED = '(unassigned)';
+  const csmKey = (c) => csmOf(c) || UNASSIGNED;
+
+  // Resolve a company by its id (for click-through from any results table).
+  const companyById = (id) => companies.find((c) => (c._id || c.id) === id) || null;
+  // Render a company name as a link that opens the health drawer. Pass the
+  // company object; falls back to plain text if it has no id.
+  const nameLink = (c, text) => {
+    const id = c && (c._id || c.id);
+    const label = esc(text != null ? text : (c && c.name) || '—');
+    return id ? `<a href="#" class="co-link" data-company-id="${esc(id)}">${label}</a>` : label;
+  };
+  // Same, but from an explicit id + label (for computed table rows).
+  const nameLinkId = (id, text) =>
+    id ? `<a href="#" class="co-link" data-company-id="${esc(id)}">${esc(text)}</a>` : esc(text);
+
+  // Country locale lives in custom["Country locale"] (e.g. "ES-ES"); fall back
+  // to a flat locale field from a CSV import, or the plain country name.
+  const localeOf = (c) => {
+    const v = (c.custom && (c.custom['Country locale'] || c.custom['Country Locale']))
+            || c._locale || c.locale || c.countryLocale || c.country || '';
+    return v ? String(v) : '';
+  };
+
+  const mrrOf = (c) => {
+    let v = c.mrr ?? c.mr ?? 0;
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    v = Number(v);
+    return isNaN(v) ? 0 : v;
+  };
+  const arrOf = (c) => {
+    let v = c.arr ?? 0;
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    v = Number(v);
+    return isNaN(v) ? 0 : v;
+  };
+  const healthOf = (c) => {
+    let v = c.h;
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    v = Number(v);
+    return isNaN(v) ? null : v;
+  };
+  const isCustomer = (c) => String(c.status || '').toLowerCase() === 'customer';
+  const isChurned = (c) => {
+    const k = String(c.status || '').toLowerCase();
+    return k === 'churned' || k === 'lost' || k === 'canceled' || k === 'cancelled';
+  };
+  // "Churned this year" is judged at the LICENCE level: a licence whose renewal
+  // status is "lost" and whose end date falls in the current calendar year. An
+  // account counts as churned-YTD if it has at least one such licence. (licLost
+  // and licEnd are defined below; this closure resolves them at call time.)
+  const churnedThisYear = (c) => {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    const yr = new Date().getFullYear();
+    return ls.some((l) => {
+      if (!licLost(l)) return false;
+      const end = licEnd(l);
+      return end && end.getFullYear() === yr;
+    });
+  };
+
+  // "New account this year": the account has NO historic licences (none that are
+  // renewed or lost — i.e. it hasn't been through a prior renewal or churn) AND
+  // at least one licence whose start date falls in the current calendar year.
+  // That marks a freshly-won account rather than an existing one expanding.
+  const newLicencesThisYear = (c) => {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    if (!ls.length) return [];
+    // Any renewed/lost licence means there's history → not a new account.
+    if (ls.some((l) => licRenewed(l) || licLost(l))) return [];
+    const yr = new Date().getFullYear();
+    return ls.filter((l) => { const s = licStart(l); return s && s.getFullYear() === yr; });
+  };
+  const isNewThisYear = (c) => newLicencesThisYear(c).length > 0;
+  // Onboarding is judged on the same `phase` field the Accounts tab shows and
+  // the phase filter uses, so counts stay consistent across tabs.
+  // Onboarding is judged on the phase field: phases containing "onboard" or
+  // "to start" (e.g. "0. To start"), plus any account with a "To start" status.
+  const isOnboarding = (c) =>
+    /onboard|to\s*start/i.test(String(c.phase || ''))
+    || String(c.status || '').trim().toLowerCase() === 'to start';
+
+  const renewalOf = (c) => {
+    const d = c.renewalDate ? new Date(c.renewalDate) : null;
+    return d && !isNaN(d) ? d : null;
+  };
+
+  // ---- Licences (Planhat Revenue tab) ----
+  // Accounts can run multiple concurrent licences, each with its own renewal.
+  // Planhat gives `renewalDaysFromNow` = days until the licence's NEXT renewal;
+  // this is the reliable forward-looking signal (a stale renewalDate may sit in
+  // the past even after the licence has been renewed). Fetched once after
+  // companies load; keyed by companyId.
+  let licensesByCompany = new Map();
+
+  // The licence's next renewal date. Prefer renewalDaysFromNow (today + N days);
+  // fall back to explicit date fields only if that field is absent.
+  const licDate = (l) => {
+    const n = l.renewalDaysFromNow ?? l.renewalDaysFromToday ?? l.daysToRenewal;
+    if (n != null && n !== '' && !isNaN(Number(n))) {
+      return new Date(Date.now() + Number(n) * 86400000);
+    }
+    const d = new Date(l.renewalDate || l.toDate || l.endDate || l.to || '');
+    return isNaN(d) ? null : d;
+  };
+  const licMrr = (l) => {
+    let v = l.mrr ?? l.mr ?? l._mrr;
+    if (typeof v === 'string') v = v.replace(/,/g, '').trim();
+    v = Number(v);
+    return isNaN(v) ? 0 : v;
+  };
+  const licLabel = (l) => String(l.product || l.name || l.plan || '').trim();
+  // Licence period start/end, for upsell detection (matching a new licence to the
+  // prior renewed one whose period ended just before it started).
+  const licStart = (l) => {
+    const d = new Date(l.fromDate || l.startDate || l.from || l.start || l.createDate || l.createdAt || '');
+    return isNaN(d) ? null : d;
+  };
+  const licEnd = (l) => {
+    const d = new Date(l.toDate || l.endDate || l.to || l.end || l.renewalDate || '');
+    return isNaN(d) ? null : d;
+  };
+  // A licence's "Renewal Status" describes where the renewal stands. Precedence:
+  //   1. "renewed" → WON. Overrides everything: the renewal is done, not
+  //      outstanding, regardless of any other wording in the status.
+  //   2. "lost" / "churn" / "cancel" → gone: not part of the renewal book.
+  //   3. anything else (ongoing, "3. verbal commit", "2. quote sent", …) → the
+  //      renewal is due and still open — OUTSTANDING (to renew).
+  // Find the renewal-status value wherever it lives: check known fields, then
+  // scan custom-field keys case-insensitively for anything "renewal status"-like.
+  // Read the renewal-status value wherever/however it's stored. It may be a
+  // string, or an array (Planhat multi-value custom fields), and may live at the
+  // top level (`renewalStatus`) or in custom. Normalise to a lower-case string.
+  const flatten = (v) => Array.isArray(v) ? v.map(flatten).join(' ') : (v == null ? '' : String(v));
+  const licRenewalStatus = (l) => {
+    let v = l.renewalStatus ?? l['Renewal Status'] ?? l.renewal_status;
+    if (v == null && l.custom) {
+      v = l.custom['Renewal Status'] ?? l.custom['Renewal status'] ?? l.custom.renewalStatus ?? l.custom.renewal_status;
+      if (v == null) {
+        for (const k of Object.keys(l.custom)) {
+          if (/renew.*stat|stat.*renew/i.test(k)) { v = l.custom[k]; break; }
+        }
+      }
+    }
+    if (v == null) {
+      for (const k of Object.keys(l)) {
+        if (/renew.*stat|stat.*renew/i.test(k)) { v = l[k]; break; }
+      }
+    }
+    return flatten(v).trim().toLowerCase();
+  };
+  const RENEWED_STATUS = /renew(ed|al complete|al won)|\bwon\b/i;  // checked FIRST — overrides all else
+  const LOST_STATUS = /lost|churn|cancel/i;
+  const licRenewed = (l) => RENEWED_STATUS.test(licRenewalStatus(l));
+  const licLost = (l) => !licRenewed(l) && LOST_STATUS.test(licRenewalStatus(l));
+  // "Due" = a renewal genuinely came up in the period. Renewed licences still
+  // count as due (they were up for renewal and got won); lost ones don't.
+  const licDue = (l) => !licLost(l);
+  // "Outstanding" = due AND not yet renewed — the renewal work still to close.
+  // "renewed" overrides everything, so a renewed licence is never outstanding.
+  const licOutstanding = (l) => !licRenewed(l) && !licLost(l);
+
+  // Renewal items for an account. `mode` is 'due' (every renewal in the period,
+  // including ones already renewed) or 'outstanding' (only those still open).
+  // Falls back to the company-level renewalDate only when the account has NO
+  // licence records at all.
+  const renewalItemsOf = (c, mode = 'due') => {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    if (ls.length) {
+      const pred = mode === 'outstanding' ? licOutstanding : licDue;
+      return ls
+        .filter(pred)
+        .map((l) => ({ date: licDate(l), mrr: licMrr(l), label: licLabel(l), status: licRenewalStatus(l) }))
+        .filter((i) => i.date);
+    }
+    const d = renewalOf(c);
+    return d ? [{ date: d, mrr: mrrOf(c), label: '', status: '' }] : [];
+  };
+
+  // ---- Expansion detection ----
+  // Two kinds of expansion, distinguished by the licence's relationship to the
+  // account's existing licences:
+  //   UPLIFT (licence cost increase): the current licence SUCCEEDS a prior
+  //     "renewed" licence — same product, its period ended ~just before this one
+  //     started — at a higher MRR. The delta is the price increase on renewal.
+  //   NEW FEATURE (cross-sell add-on): a separate current licence that runs
+  //     CONCURRENTLY with another active licence (overlapping period), started
+  //     off the normal renewal cycle rather than succeeding a renewed licence.
+  //     Its whole MRR is incremental. Usually smaller than the primary licence.
+  // A current licence that is neither is treated as new business (not shown).
+  const DAY = 86400000;
+  const licOverlaps = (a, b) => {
+    const as = licStart(a), ae = licEnd(a), bs = licStart(b), be = licEnd(b);
+    if (!as || !bs) return false;
+    const aEnd = ae || new Date(as.getTime() + 365 * DAY);
+    const bEnd = be || new Date(bs.getTime() + 365 * DAY);
+    return as < bEnd && bs < aEnd;   // periods intersect
+  };
+  function expansionsOf(c) {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    if (ls.length < 2) return [];
+    const renewedPriors = ls.filter(licRenewed)
+      .map((l) => ({ l, end: licEnd(l), start: licStart(l), mrr: licMrr(l), label: licLabel(l) }))
+      .filter((x) => x.end);
+    const current = ls.filter((l) => !licRenewed(l) && !licLost(l));
+    const out = [];
+    current.forEach((cur) => {
+      const start = licStart(cur);
+      if (!start) return;
+      // 1) UPLIFT: does it succeed a prior renewed licence of (preferably) the
+      //    same product, ending just before this one began?
+      const prior = renewedPriors
+        .filter((p) => { const gap = (start - p.end) / DAY; return gap >= -3 && gap <= 35; })
+        .sort((a, b) => {
+          const sameA = a.label && a.label === licLabel(cur) ? 0 : 1;
+          const sameB = b.label && b.label === licLabel(cur) ? 0 : 1;
+          if (sameA !== sameB) return sameA - sameB;
+          return Math.abs(start - a.end) - Math.abs(start - b.end);
+        })[0];
+      if (prior) {
+        const delta = licMrr(cur) - prior.mrr;
+        if (delta > 0) {
+          out.push({
+            c, type: 'uplift', label: licLabel(cur) || '(unnamed)', priorLabel: prior.label,
+            priorMrr: prior.mrr, newMrr: licMrr(cur), delta, start, renewalDate: licDate(cur),
+          });
+        }
+        return;   // handled as a renewal-succession licence
+      }
+      // 2) NEW FEATURE: not a succession — does it run concurrently with another
+      //    active (non-terminal) licence on the account? Then it's an add-on.
+      const concurrentWith = current.find((other) => other !== cur && licOverlaps(cur, other) && licStart(other) && licStart(other) <= start);
+      if (concurrentWith) {
+        out.push({
+          c, type: 'new-feature', label: licLabel(cur) || '(unnamed)',
+          priorLabel: licLabel(concurrentWith), priorMrr: licMrr(concurrentWith),
+          newMrr: licMrr(cur), delta: licMrr(cur), start, renewalDate: licDate(cur),
+        });
+      }
+      // else: standalone new licence → new business, not an expansion.
+    });
+    return out;
+  }
+
+  // Days until the account's NEXT renewal: soonest upcoming licence renewal,
+  // or (if all are past) the most recent one, giving a negative number.
+  const daysUntilRenewal = (c) => {
+    const items = renewalItemsOf(c);
+    if (!items.length) return null;
+    const now = Date.now();
+    const future = items.filter((i) => i.date.getTime() >= now).sort((a, b) => a.date - b.date);
+    const pick = future.length ? future[0] : items.sort((a, b) => b.date - a.date)[0];
+    return Math.round((pick.date - now) / 86400000);
+  };
+  const quarterOf = (d) => `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+
+  // For the accounts table: pick the account's PRIMARY licence — the one whose
+  // renewal drives the row. That's the soonest upcoming active (non-terminal)
+  // licence, or if all are past, the most recent. Returns the raw licence plus
+  // counts, so MRR/ARR/renewal shown all come from the same licence.
+  const licArr = (l) => {
+    let v = l.arr ?? l.acv ?? (licMrr(l) ? licMrr(l) * 12 : 0);
+    v = Number(v); return isNaN(v) ? 0 : v;
+  };
+  function primaryLicence(c) {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    // Only ongoing licences count — exclude both renewed (won, terminal) and
+    // lost. These are the live subscriptions the account actually runs now.
+    const ongoing = ls.filter(licOutstanding);
+    const total = ongoing.length;
+    if (!total) return { lic: null, total: 0, index: 0, isExtra: false };
+    // Order the ongoing licences by renewal date (soonest first, undated last)
+    // so the displayed one has a stable position within the set.
+    const ordered = ongoing.slice().sort((a, b) => {
+      const da = licDate(a), db = licDate(b);
+      if (da && db) return da - db;
+      if (da) return -1;
+      if (db) return 1;
+      return 0;
+    });
+    // Primary = soonest upcoming renewal, else most recent past, else first.
+    const dated = ordered.map((l) => ({ l, d: licDate(l) })).filter((x) => x.d);
+    let pick = null;
+    if (dated.length) {
+      const now = Date.now();
+      const future = dated.filter((x) => x.d.getTime() >= now).sort((a, b) => a.d - b.d);
+      pick = (future.length ? future[0] : dated.sort((a, b) => b.d - a.d)[0]).l;
+    } else {
+      pick = ordered[0];
+    }
+    const index = ordered.indexOf(pick) + 1;   // 1-based position within ongoing set
+    // With a single ongoing licence it is, by definition, the main one.
+    // Otherwise, mark it "extra" if the displayed licence is a detected
+    // expansion (add-on / upsell) rather than the main subscription.
+    let isExtra = false;
+    if (pick && total > 1) {
+      const exps = expansionsOf(c);
+      isExtra = exps.some((e) => e.label === licLabel(pick) && e.newMrr === licMrr(pick));
+    }
+    return { lic: pick, total, index, isExtra };
+  }
+
+  let activeTab = 'accounts';
+
+  // No auth UI for tokens. If a token was ever saved in this browser by an
+  // earlier version of the tool, send it silently. The session cookie is
+  // remembered here too — this browser only, never stored on the server.
+  let storedKey = '';
+  try { storedKey = localStorage.getItem('ph_key') || ''; } catch (e) { /* fine */ }
+  // ---- Session cookie: mask by default, strip to the auth cookie, remember locally ----
+  const COOKIE_ANCHOR = 'phAuth-citizenlab=';
+  els.cookieVal.classList.add('masked');
+
+  // Everything before the auth cookie is noise from a full header paste — drop it
+  // so we send a clean, correctly-formed cookie.
+  function cleanCookie(v) {
+    v = v.trim().replace(/^cookie:\s*/i, '');
+    const at = v.indexOf(COOKIE_ANCHOR);
+    if (at > -1) v = v.slice(at);
+    return v.replace(/[\r\n]+/g, ' ').trim();
+  }
+
+  try { const c = localStorage.getItem('ph_cookie'); if (c) els.cookieVal.value = c; } catch (e) { /* fine */ }
+
+  els.toggleCookie.addEventListener('click', () => {
+    const masked = els.cookieVal.classList.toggle('masked');
+    els.toggleCookie.textContent = masked ? 'Show' : 'Hide';
+    els.toggleCookie.setAttribute('aria-pressed', String(!masked));
+  });
+
+  // Prepare the cookie box for pasting a fresh cookie: clear it, un-blur it, and
+  // reset the show/hide toggle. Used when the connect screen opens because the
+  // current cookie is invalid/expired, or on a manual reconnect.
+  function prepCookieForEntry() {
+    els.cookieVal.value = '';
+    els.cookieVal.classList.remove('masked');
+    els.toggleCookie.textContent = 'Hide';
+    els.toggleCookie.setAttribute('aria-pressed', 'true');
+  }
+
+  function currentCookie() {
+    const v = cleanCookie(els.cookieVal.value);
+    if (v !== els.cookieVal.value.trim()) els.cookieVal.value = v; // reflect the strip back to the box
+    try {
+      if (v) localStorage.setItem('ph_cookie', v);
+      else localStorage.removeItem('ph_cookie');
+    } catch (e) { /* fine */ }
+    return v;
+  }
+
+  // ---------- Fetch ----------
+  async function proxyGet(path, query) {
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: storedKey,
+        cookie: currentCookie(),
+        baseUrl: BASE,
+        path, query,
+      }),
+    });
+    let payload;
+    try { payload = await res.json(); }
+    catch { throw new Error(`Proxy returned non-JSON (HTTP ${res.status}). Check ${PROXY} is reachable and PHP is enabled there.`); }
+    if (payload.url) els.queryShown.textContent = 'GET ' + payload.url;
+    log(`GET ${payload.url || path} → ${payload.status ?? res.status} in ${payload.ms ?? '?'}ms`);
+    if (!payload.ok) {
+      const detail = typeof payload.data === 'string' ? payload.data
+                   : (payload.data && (payload.data.message || payload.data.error)) || payload.error || '';
+      const hints = { 401: ' (check the API token)', 403: ' (token lacks permission)', 429: ' (rate limited — try again shortly)' };
+      throw new Error(`Planhat responded ${payload.status ?? res.status}${hints[payload.status] || ''}. ${detail}`.trim());
+    }
+    return payload.data;
+  }
+
+  async function loadCompanies() {
+    els.loadBtn.disabled = true;
+    companies = [];
+    let offset = 0;
+    const overlay = $('loadingOverlay'), loadingText = $('loadingText');
+    els.connectScreen.hidden = true;   // hide the connect screen while attempting
+    overlay.hidden = false;
+    els.filterPanel.hidden = true;
+    els.summary.hidden = true;
+    els.tabs.hidden = true;
+    ['panel-accounts', 'panel-renewals', 'panel-portfolios', 'panel-trends', 'panel-strategy', 'panel-support', 'panel-activity'].forEach((p) => { const el = $(p); if (el) el.hidden = true; });
+
+    try {
+      while (offset < HARD_CAP) {
+        const batch = await proxyGet('companies', {
+          limit: PAGE_LIMIT, offset, sort: 'name',
+        });
+        if (!Array.isArray(batch)) throw new Error('Unexpected response shape from /companies (expected an array).');
+        companies = companies.concat(batch);
+        loadingText.textContent = `Loading customer accounts… ${companies.length.toLocaleString('en-GB')} so far`;
+        setStatus(`Loading companies… ${companies.length} so far`);
+        if (batch.length < PAGE_LIMIT) break;
+        offset += PAGE_LIMIT;
+      }
+      setStatus(`Loaded ${companies.length.toLocaleString('en-GB')} companies.`, 'ok');
+      log(`Done. ${companies.length} companies in memory.`);
+
+      // Fetch licences (Revenue tab) — accounts can run several concurrent
+      // licences, each with its own renewal. Best-effort: if this fails, the
+      // tool falls back to company-level renewal dates.
+      licensesByCompany = new Map();
+      try {
+        loadingText.textContent = 'Loading licences…';
+        setStatus('Loading licences…');
+        let lOffset = 0, lCount = 0;
+        while (lOffset < 100000) {
+          const lb = await proxyGet('licenses', { limit: PAGE_LIMIT, offset: lOffset });
+          if (!Array.isArray(lb)) throw new Error('Unexpected /licenses response.');
+          lb.forEach((l) => {
+            const cid = l.companyId || (l.parentObject && l.parentObject.id);
+            if (!cid) return;
+            // Ignore zero-MRR licences everywhere — they don't count toward
+            // renewals, upsells, counts, or the accounts table.
+            if (licMrr(l) === 0) return;
+            if (!licensesByCompany.has(cid)) licensesByCompany.set(cid, []);
+            licensesByCompany.get(cid).push(l);
+          });
+          lCount += lb.length;
+          if (lb.length < PAGE_LIMIT) break;
+          lOffset += PAGE_LIMIT;
+        }
+        log(`Licences: ${lCount} loaded across ${licensesByCompany.size} companies.`);
+        setStatus(`Loaded ${companies.length.toLocaleString('en-GB')} companies and ${lCount.toLocaleString('en-GB')} licences.`, 'ok');
+      } catch (licErr) {
+        log('Licence fetch failed (falling back to company renewal dates): ' + licErr.message);
+      }
+
+      buildFilterOptions();
+      buildYearTabs();
+      els.filterPanel.hidden = false;
+      els.summary.hidden = false;
+      els.tabs.hidden = false;
+      els.connectScreen.hidden = true;   // connected — keep the connect screen hidden
+      els.reconnectBtn.hidden = false;   // offer a way back to the connect screen
+      selectTab(activeTab);
+    } catch (err) {
+      setStatus(err.message, 'err');
+      log('ERROR: ' + err.message);
+      // Connection failed — surface the connect screen so a fresh cookie can be
+      // pasted. Tailor the intro to whether it looks like an auth/cookie issue.
+      const authish = /401|403|cookie|token|permission|non-JSON/i.test(err.message);
+      els.connectIntro.textContent = authish
+        ? 'Couldn’t connect to Planhat — your session cookie is missing or has expired. Paste a fresh Cookie header from a logged-in api.planhat.com request to reconnect.'
+        : 'Couldn’t load your accounts: ' + err.message + ' Paste a current session cookie and try again, or load a CSV export instead.';
+      if (authish) prepCookieForEntry();   // invalid cookie → clear & un-blur for a fresh paste
+      els.connectScreen.hidden = false;
+      els.filterPanel.hidden = true;
+      els.summary.hidden = true;
+      els.tabs.hidden = true;
+      if (authish) els.cookieVal.focus();
+    } finally {
+      overlay.hidden = true;
+      els.loadBtn.disabled = false;
+    }
+  }
+
+  // On startup: if we have a stored cookie, try to connect automatically and go
+  // straight to the table. Only show the connect screen if that fails (or if
+  // there's no stored cookie at all).
+  function startup() {
+    let hasCookie = false;
+    try { hasCookie = !!localStorage.getItem('ph_cookie'); } catch (e) { /* fine */ }
+    if (hasCookie) {
+      loadCompanies();   // auto-attempt; shows connect screen on failure
+    } else {
+      els.connectIntro.textContent = 'Paste a current session cookie to load your accounts. The saved cookie expires when your Planhat session does — if the table stops loading, come back here and paste a fresh one.';
+      els.connectScreen.hidden = false;
+    }
+  }
+
+  // Year sub-tabs: the prior year, current year, plus the next four.
+  let renewalYear = new Date().getFullYear();  // a year number, or 'all'
+  const RENEWAL_YEARS_AHEAD = 4;
+  function buildYearTabs() {
+    const y0 = new Date().getFullYear();
+    const years = [];
+    for (let i = -1; i <= RENEWAL_YEARS_AHEAD; i++) years.push(y0 + i);
+    if (renewalYear !== 'all' && !years.includes(renewalYear)) renewalYear = y0;
+    els.yearTabs.innerHTML =
+      `<button type="button" data-year="all" aria-pressed="${renewalYear === 'all'}">All years</button>` +
+      years.map((y) =>
+        `<button type="button" data-year="${y}" aria-pressed="${y === renewalYear}">${y}</button>`).join('');
+  }
+
+  // ---------- Filters ----------
+  function buildFilterOptions() {
+    const fill = (sel, values, label) => {
+      sel.length = 1; // keep "All …"
+      [...values].sort((a, b) => a.localeCompare(b)).forEach((v) => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+      });
+      sel.options[0].textContent = label;
+    };
+    fill(els.fPhase,  new Set(companies.map(c => c.phase).filter(Boolean)),  'All phases');
+    fill(els.fLocale, new Set(companies.map(localeOf).filter(Boolean)),       'All locales');
+    buildStatusMenu();
+    buildCsmMenu();
+  }
+
+  function buildStatusMenu() {
+    const vals = [...new Set(companies.map(c => c.status).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    // Default to showing customers on first load, if that status exists.
+    if (!statusDefaulted) {
+      const cust = vals.find((v) => v.toLowerCase() === 'customer');
+      if (cust) selectedStatuses = new Set([cust]);
+      statusDefaulted = true;
+    }
+    // Drop any previously-selected values no longer present.
+    selectedStatuses = new Set([...selectedStatuses].filter((v) => vals.includes(v)));
+    els.fStatusMenu.innerHTML =
+      `<div class="multi-actions">
+         <button type="button" data-act="all">Select all</button>
+         <button type="button" data-act="none">Clear</button>
+       </div>` +
+      vals.map((v) =>
+        `<label><input type="checkbox" value="${esc(v)}" ${selectedStatuses.has(v) ? 'checked' : ''}>${esc(v)}</label>`
+      ).join('');
+    updateStatusButton();
+  }
+  let statusDefaulted = false;
+
+  function updateStatusButton() {
+    const n = selectedStatuses.size;
+    els.fStatusBtn.innerHTML = n === 0
+      ? 'All statuses'
+      : (n === 1 ? esc([...selectedStatuses][0]) : `${n} statuses selected <span class="cnt">${n}</span>`);
+  }
+
+  function buildCsmMenu() {
+    // Only list CSMs who actually hold at least one account in the current view
+    // (respecting the other filters). Portfolio holders with no matching
+    // accounts are hidden. Keep any currently-selected CSM visible even if the
+    // other filters would hide them, so the active selection stays intact.
+    const source = filteredExceptCsm();
+    const names = [...new Set([...source.map(csmKey), ...selectedCsms])]
+      .sort((a, b) => a.localeCompare(b));
+    // Drop any previously-selected names that no longer exist in the data at all.
+    const everyName = new Set(companies.map(csmKey));
+    selectedCsms = new Set([...selectedCsms].filter((n) => everyName.has(n)));
+    els.fCsmMenu.innerHTML =
+      `<div class="multi-actions">
+         <button type="button" data-act="all">Select all</button>
+         <button type="button" data-act="none">Clear</button>
+       </div>` +
+      names.map((n) =>
+        `<label><input type="checkbox" value="${esc(n)}" ${selectedCsms.has(n) ? 'checked' : ''}>${esc(n)}</label>`
+      ).join('');
+    updateCsmButton();
+  }
+
+  function updateCsmButton() {
+    const n = selectedCsms.size;
+    els.fCsmBtn.innerHTML = n === 0
+      ? 'All CSMs'
+      : (n === 1 ? esc([...selectedCsms][0]) : `${n} CSMs selected <span class="cnt">${n}</span>`);
+  }
+
+  function filtered() {
+    const q = els.q.value.trim().toLowerCase();
+    const ph = els.fPhase.value, lc = els.fLocale.value;
+    const csmSel = selectedCsms.size > 0;
+    const stSel = selectedStatuses.size > 0;
+    return companies.filter((c) => {
+      if (stSel && !selectedStatuses.has(c.status)) return false;
+      if (ph && c.phase !== ph) return false;
+      if (csmSel && !selectedCsms.has(csmKey(c))) return false;
+      if (lc && localeOf(c) !== lc) return false;
+      if (q) {
+        const hay = (c.name || '') + ' ' + (Array.isArray(c.domains) ? c.domains.join(' ') : (c.domains || ''));
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  // Companies passing every filter EXCEPT the CSM selection — used to decide
+  // which CSMs actually have accounts in the current view, so portfolio holders
+  // with no matching accounts are hidden from the CSM filter.
+  function filteredExceptCsm() {
+    const q = els.q.value.trim().toLowerCase();
+    const ph = els.fPhase.value, lc = els.fLocale.value;
+    const stSel = selectedStatuses.size > 0;
+    return companies.filter((c) => {
+      if (stSel && !selectedStatuses.has(c.status)) return false;
+      if (ph && c.phase !== ph) return false;
+      if (lc && localeOf(c) !== lc) return false;
+      if (q) {
+        const hay = (c.name || '') + ' ' + (Array.isArray(c.domains) ? c.domains.join(' ') : (c.domains || ''));
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }
+
+  // ---------- Sorting ----------
+  const numericKeys = new Set(['h', 'mrr', 'arr']);
+  function sortRows(rows) {
+    const key = sortKey, dir = sortDir;
+    // For MRR / ARR / renewal, sort on the same primary-licence values the table
+    // displays (not the company-level fee), so the ordering matches the rows.
+    const pick = (c) => {
+      if (key === 'mrr' || key === 'arr' || key === 'renewalDate') {
+        const p = primaryLicence(c);
+        if (key === 'mrr') return p.lic ? licMrr(p.lic) : mrrOf(c);
+        if (key === 'arr') return p.lic ? licArr(p.lic) : arrOf(c);
+        return (p.lic ? licDate(p.lic) : renewalOf(c)) || '';
+      }
+      if (key === '_lictype') { const p = primaryLicence(c); return p.total ? (p.isExtra ? 'extra' : 'main') : ''; }
+      if (key === '_csm') return csmOf(c);
+      if (key === '_locale') return localeOf(c);
+      return c[key];
+    };
+    return rows.slice().sort((a, b) => {
+      let av = pick(a), bv = pick(b);
+      if (av === undefined || av === null || av === '') return 1;
+      if (bv === undefined || bv === null || bv === '') return -1;
+      if (numericKeys.has(key)) return (Number(av) - Number(bv)) * dir;
+      if (key === 'renewalDate' || key === 'updatedAt')
+        return (new Date(av) - new Date(bv)) * dir;
+      return String(av).localeCompare(String(bv), 'en', { sensitivity: 'base' }) * dir;
+    });
+  }
+
+  // ---------- Master render: refresh summary, then draw the active tab ----------
+  function render() {
+    const rows = filtered();
+    renderSummary(rows);
+    if (activeTab === 'accounts')   renderAccounts(rows);
+    if (activeTab === 'renewals')   renderRenewals(rows);
+    if (activeTab === 'portfolios') renderPortfolios(rows);
+    if (activeTab === 'trends')     renderTrends(rows);
+    if (activeTab === 'strategy')   renderStrategy(rows);
+    if (activeTab === 'support')    renderSupport(rows);
+    if (activeTab === 'activity')   renderActivity();
+  }
+
+  // Summary bar reflects the filtered set — this is what makes the count move.
+  let churnedYtdList = [];   // accounts churned this year, for the popup
+  let newYtdList = [];       // accounts newly gained this year, for the popup
+  let upsellYtdList = [];     // this year's expansions, for the popup
+  function renderSummary(rows) {
+    const totalMrr = rows.reduce((s, c) => s + mrrOf(c), 0);
+    const healths = rows.map(healthOf).filter((v) => v !== null);
+    const avgH = healths.length ? (healths.reduce((a, b) => a + b, 0) / healths.length) : null;
+    const csms = new Set(rows.map(csmKey));
+    // Total ongoing licences across the filtered accounts.
+    const totalLicences = rows.reduce((s, c) => s + primaryLicence(c).total, 0);
+
+    els.mAccounts.textContent  = rows.length.toLocaleString('en-GB');
+    els.mLicences.textContent  = totalLicences.toLocaleString('en-GB');
+    els.mMrr.textContent       = '€' + totalMrr.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+    els.mHealth.textContent    = avgH === null ? '—' : avgH.toFixed(1);
+    els.mCsms.textContent      = csms.size.toLocaleString('en-GB');
+
+    // Churned this calendar year. Churned accounts are excluded by the default
+    // status filter, so count from all companies — but still honour the CSM,
+    // locale and search filters so the figure matches the portfolio/region view.
+    const q = els.q.value.trim().toLowerCase();
+    const lc = els.fLocale.value, ph = els.fPhase.value;
+    const csmSel = selectedCsms.size > 0;
+    churnedYtdList = companies.filter((c) => {
+      if (!churnedThisYear(c)) return false;
+      if (csmSel && !selectedCsms.has(csmKey(c))) return false;
+      if (lc && localeOf(c) !== lc) return false;
+      if (ph && c.phase !== ph) return false;
+      if (q) {
+        const hay = (c.name || '') + ' ' + (Array.isArray(c.domains) ? c.domains.join(' ') : (c.domains || ''));
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+    els.mChurned.textContent   = churnedYtdList.length.toLocaleString('en-GB');
+    // Churned MRR: sum of the lost licences (ending this year) that qualified
+    // these accounts.
+    const churnYr = new Date().getFullYear();
+    const churnedMrr = churnedYtdList.reduce((s, c) => {
+      const ls = licensesByCompany.get(c._id || c.id) || [];
+      return s + ls.reduce((t, l) => {
+        const end = licEnd(l);
+        return t + ((licLost(l) && end && end.getFullYear() === churnYr) ? licMrr(l) : 0);
+      }, 0);
+    }, 0);
+    els.mChurnedMrr.textContent = '€' + churnedMrr.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+
+    // New accounts gained this year (no history + a licence starting this year),
+    // honouring the same non-status filters, plus their resulting sales MRR.
+    newYtdList = companies.filter((c) => {
+      if (!isNewThisYear(c)) return false;
+      if (csmSel && !selectedCsms.has(csmKey(c))) return false;
+      if (lc && localeOf(c) !== lc) return false;
+      if (ph && c.phase !== ph) return false;
+      if (q) {
+        const hay = (c.name || '') + ' ' + (Array.isArray(c.domains) ? c.domains.join(' ') : (c.domains || ''));
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+    const newMrr = newYtdList.reduce((s, c) =>
+      s + newLicencesThisYear(c).reduce((t, l) => t + licMrr(l), 0), 0);
+    els.mNew.textContent    = newYtdList.length.toLocaleString('en-GB');
+    els.mNewMrr.textContent = '€' + newMrr.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+
+    // Upsells (YTD): expansion MRR (uplifts + new features) whose START date is
+    // this calendar year — same expansionsOf() logic the Upsells tab uses,
+    // filtered to the current-year quarters. Honours the same non-status filters.
+    const upYr = new Date().getFullYear();
+    upsellYtdList = companies.filter((c) => {
+      if (csmSel && !selectedCsms.has(csmKey(c))) return false;
+      if (lc && localeOf(c) !== lc) return false;
+      if (ph && c.phase !== ph) return false;
+      if (q) {
+        const hay = (c.name || '') + ' ' + (Array.isArray(c.domains) ? c.domains.join(' ') : (c.domains || ''));
+        if (!hay.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    }).flatMap((c) => expansionsOf(c)).filter((e) => e.start && e.start.getFullYear() === upYr);
+    const upsellMrr = upsellYtdList.reduce((s, e) => s + e.delta, 0);
+    els.mUpsellMrr.textContent = '€' + upsellMrr.toLocaleString('en-GB', { maximumFractionDigits: 0 });
+
+    // Net indicators.
+    const netClients = newYtdList.length - churnedYtdList.length;
+    const netCash = (newMrr + upsellMrr) - churnedMrr;
+    const fmtSigned = (v, money) => (v > 0 ? '+' : v < 0 ? '−' : '') + (money ? '€' : '') + Math.abs(v).toLocaleString('en-GB', { maximumFractionDigits: 0 });
+    els.mNetClients.textContent = fmtSigned(netClients, false);
+    els.mNetCash.textContent    = fmtSigned(netCash, true);
+    els.mNetClients.className = 'v ' + (netClients > 0 ? 'pos' : netClients < 0 ? 'neg' : '');
+    els.mNetCash.className    = 'v ' + (netCash > 0 ? 'pos' : netCash < 0 ? 'neg' : '');
+
+    const active = [
+      selectedStatuses.size === 1 && `status: ${[...selectedStatuses][0]}`,
+      selectedStatuses.size > 1 && `${selectedStatuses.size} statuses`,
+      els.fPhase.value && `phase: ${els.fPhase.value}`,
+      selectedCsms.size === 1 && `CSM: ${[...selectedCsms][0]}`,
+      selectedCsms.size > 1 && `${selectedCsms.size} CSMs`,
+      els.fLocale.value && `locale: ${els.fLocale.value}`,
+      els.q.value.trim() && `“${els.q.value.trim()}”`,
+    ].filter(Boolean);
+    els.scopeNote.textContent = active.length
+      ? `Filtered by ${active.join(', ')} · ${rows.length} of ${companies.length}`
+      : `All ${companies.length.toLocaleString('en-GB')} accounts`;
+
+    if (companies.length) {
+      setStatus(`Showing ${rows.length.toLocaleString('en-GB')} of ${companies.length.toLocaleString('en-GB')} companies.`,
+                rows.length ? '' : 'err');
+    }
+  }
+
+  // ---------- Tab: Accounts ----------
+  // Build a helper that lists an account's ongoing licences in a stable order
+  // (soonest renewal first), each with its 1-based index and type (main/extra).
+  function licenceRowsFor(c) {
+    const ls = licensesByCompany.get(c._id || c.id) || [];
+    const ongoing = ls.filter(licOutstanding);   // excludes renewed, lost, and (already) MRR=0
+    if (!ongoing.length) return [];
+    const ordered = ongoing.slice().sort((a, b) => {
+      const da = licDate(a), db = licDate(b);
+      if (da && db) return da - db;
+      if (da) return -1; if (db) return 1; return 0;
+    });
+    const total = ordered.length;
+    const exps = total > 1 ? expansionsOf(c) : [];
+    return ordered.map((l, idx) => ({
+      c, lic: l, index: idx + 1, total,
+      isExtra: total > 1 && exps.some((e) => e.label === licLabel(l) && e.newMrr === licMrr(l)),
+    }));
+  }
+
+  function renderAccounts(rowsIn) {
+    const rows = sortRows(rowsIn);
+    updateHeaderArrows();
+    // Expand each account into one row per ongoing licence. Accounts with no
+    // licence records still get a single row using company-level figures.
+    const hideExtra = els.hideExtra && els.hideExtra.checked;
+    const entries = [];
+    rows.forEach((c) => {
+      let lrs = licenceRowsFor(c);
+      const hadLicences = lrs.length > 0;
+      if (hideExtra) lrs = lrs.filter((e) => !e.isExtra);
+      if (lrs.length) entries.push(...lrs);
+      else if (!hadLicences) entries.push({ c, lic: null, index: 0, total: 0, isExtra: false });
+    });
+
+    els.tbody.innerHTML = entries.map((e, i) => {
+      const c = e.c;
+      const domains = Array.isArray(c.domains) ? c.domains.join(', ') : (c.domains || '');
+      const rowMrr = e.lic ? licMrr(e.lic) : mrrOf(c);
+      const rowArr = e.lic ? licArr(e.lic) : arrOf(c);
+      const rowRenewal = e.lic ? licDate(e.lic) : renewalOf(c);
+      // Sequence tag: which ongoing licence this row is, out of the account's
+      // ongoing total (e.g. 2/3).
+      const licTag = e.total
+        ? ` <span class="lic-tag" title="Ongoing licence ${e.index} of ${e.total}">(${e.index}/${e.total})</span>`
+        : '';
+      const licKind = e.isExtra ? 'extra' : 'main';
+      const licCell = e.total
+        ? `<span class="pill ${e.isExtra ? 'other' : 'customer'}">${licKind}</span>`
+        : '—';
+      // Show the licence's product label under the company name when expanded.
+      const prodLabel = e.lic ? licLabel(e.lic) : '';
+      return `<tr data-i="${i}" class="clickable" data-open="${i}">
+        <td><span class="name">${esc(c.name) || '—'}</span>${licTag}
+            ${prodLabel ? `<span class="domains">${esc(prodLabel)}</span>` : (domains ? `<span class="domains">${esc(domains)}</span>` : '')}</td>
+        <td>${licCell}</td>
+        <td>${esc(csmOf(c)) || '—'}</td>
+        <td>${esc(localeOf(c)) || '—'}</td>
+        <td><span class="pill ${statusClass(c.status)}">${esc(c.status) || '—'}</span></td>
+        <td>${esc(c.phase) || '—'}</td>
+        <td class="num">${fmtNum(c.h)}</td>
+        <td class="num">${fmtEur(rowMrr)}</td>
+        <td class="num">${fmtEur(rowArr)}</td>
+        <td class="num">${rowRenewal ? fmtDate(rowRenewal) : '—'}</td>
+        <td class="num">${fmtDate(c.updatedAt)}</td>
+        <td><button type="button" class="rowbtn" data-detail="${i}"
+              aria-expanded="false" aria-label="Show raw record for ${esc(c.name)}">JSON</button></td>
+      </tr>`;
+    }).join('');
+    // Store the per-row company for click-through / JSON, keyed by row index.
+    els.tbody._rows = entries.map((e) => e.c);
+    els.tbody._entries = entries;
+    els.emptyMsg.hidden = entries.length > 0;
+  }
+
+  // ---------- Tab: Renewals by quarter ----------
+  const expandedQuarters = new Set();  // which quarter rows are expanded
+  const HIGH_VALUE_MRR = 2000;          // renewals at/above this (€) are highlighted
+  let renewalUserToggled = false;       // once true, respect the user's manual expand/collapse
+  let renewalMode = 'outstanding';  // default view; 'due' = all renewals incl. renewed
+  let upsellSort = { key: 'delta', dir: -1 };
+  let expandedOther = false;   // "Other / earlier years" collapsed by default
+  function renderUpsells(rows) {
+    // Gather expansions across filtered, non-churned accounts.
+    const data = rows.filter((c) => !isChurned(c)).flatMap((c) => expansionsOf(c));
+
+    els.renewalHead.innerHTML = `<tr>
+      <th data-ukey="type" tabindex="0">Type</th>
+      <th data-ukey="name" tabindex="0">Account</th>
+      <th data-ukey="csm" tabindex="0">CSM</th>
+      <th data-ukey="label" tabindex="0">Licence</th>
+      <th data-ukey="priorMrr" tabindex="0" style="text-align:right">Prior / concurrent MRR</th>
+      <th data-ukey="newMrr" tabindex="0" style="text-align:right">This licence MRR</th>
+      <th data-ukey="delta" tabindex="0" style="text-align:right">Expansion (Δ)</th>
+      <th data-ukey="start" tabindex="0" style="text-align:right">Started</th></tr>`;
+
+    if (!data.length) {
+      els.renewalBody.innerHTML = `<tr><td colspan="8" class="q-zero" style="padding:1rem;text-align:center">No expansions detected for the current filters. An uplift needs a current licence whose MRR exceeds a prior "renewed" licence of the same product; a new feature needs an add-on licence running concurrently with an existing one.</td></tr>`;
+      return;
+    }
+
+    const typePill = (t) => t === 'uplift'
+      ? '<span class="pill customer" title="Same product renewed at a higher price">Uplift</span>'
+      : '<span class="pill other" title="Additional add-on licence running alongside the main one">New feature</span>';
+    const sum = (arr) => arr.reduce((s, u) => s + u.delta, 0);
+
+    // Bucket by current-year quarter, keyed on the expansion's start date.
+    const y0 = new Date().getFullYear();
+    const quarters = [1, 2, 3, 4].map((q) => `${y0}-Q${q}`);
+    const byQ = {}; quarters.forEach((q) => byQ[q] = []);
+    const other = [];   // expansions whose start is in another year (or undated)
+    data.forEach((u) => {
+      const q = u.start ? quarterOf(u.start) : null;
+      if (q && byQ[q]) byQ[q].push(u); else other.push(u);
+    });
+
+    const { key, dir } = upsellSort;
+    const sortRows = (arr) => arr.slice().sort((a, b) => {
+      if (key === 'name') return String(a.c.name).localeCompare(String(b.c.name)) * dir;
+      if (key === 'csm') return String(csmOf(a.c)).localeCompare(String(csmOf(b.c))) * dir;
+      if (key === 'label' || key === 'type') return String(a[key]).localeCompare(String(b[key])) * dir;
+      return (a[key] - b[key]) * dir;
+    });
+
+    const rowHtml = (u) => `<tr>
+      <td>${typePill(u.type)}</td>
+      <td class="name">${nameLink(u.c)}</td>
+      <td>${esc(csmOf(u.c) || '(unassigned)')}</td>
+      <td>${esc(u.label)}${u.type === 'uplift' && u.priorLabel && u.priorLabel !== u.label ? ` <span class="hint">(was ${esc(u.priorLabel)})</span>` : ''}</td>
+      <td class="num">${fmtEur(u.priorMrr)}</td>
+      <td class="num">${fmtEur(u.newMrr)}</td>
+      <td class="num" style="color:var(--accent);font-weight:600">+${fmtEur(u.delta)}</td>
+      <td class="num">${u.start ? fmtDate(u.start) : '—'}</td>
+    </tr>`;
+
+    const section = (label, arr, collapsible) => {
+      if (!arr.length) return '';
+      const up = arr.filter((u) => u.type === 'uplift');
+      const ft = arr.filter((u) => u.type === 'new-feature');
+      const bits = [];
+      if (up.length) bits.push(`${up.length} uplift +${fmtEur(sum(up))}`);
+      if (ft.length) bits.push(`${ft.length} new feature +${fmtEur(sum(ft))}`);
+      const caret = collapsible
+        ? `<button type="button" class="q-toggle" id="upsellOtherToggle" aria-expanded="${expandedOther}" style="margin-right:.4rem">${expandedOther ? '−' : '+'}</button>`
+        : '';
+      const header = `<tr class="q-total"><td colspan="6" style="font-weight:600">${caret}${esc(label)} — ${bits.join(' · ')}</td>
+        <td class="num" style="font-weight:600;color:var(--accent)">+${fmtEur(sum(arr))}</td><td></td></tr>`;
+      if (collapsible && !expandedOther) return header;
+      return header + sortRows(arr).map(rowHtml).join('');
+    };
+
+    let html = quarters.map((q) => section(q + ' (started)', byQ[q], false)).join('');
+    if (other.length) html += section('Other / earlier years', other, true);
+    els.renewalBody.innerHTML = html;
+
+    // Grand totals across everything shown.
+    const uplift = data.filter((u) => u.type === 'uplift');
+    const feature = data.filter((u) => u.type === 'new-feature');
+    els.renewalBody.innerHTML += `<tr class="q-total" style="border-top:2px solid var(--border)"><td colspan="6" style="font-weight:700">TOTAL ${y0} — ${uplift.length} uplift (+${fmtEur(sum(uplift))}) · ${feature.length} new feature (+${fmtEur(sum(feature))})</td>
+      <td class="num" style="font-weight:700;color:var(--accent)">+${fmtEur(sum(data))}</td><td></td></tr>`;
+    updateUpsellArrows();
+  }
+  function updateUpsellArrows() {
+    document.querySelectorAll('#renewalTbl thead th[data-ukey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.ukey === upsellSort.key, upsellSort.dir);
+    });
+  }
+
+  function renderRenewals(rows) {
+    if (renewalMode === 'upsell') { renderUpsells(rows); return; }
+    const allMode = renewalYear === 'all';
+
+    // One renewal ITEM per licence in the chosen mode (all-due vs outstanding),
+    // falling back to the company-level date for accounts with no licences.
+    const liveAccounts = rows.filter((c) => !isChurned(c) && renewalItemsOf(c, renewalMode).length);
+    const items = liveAccounts.flatMap((c) => renewalItemsOf(c, renewalMode).map((i) => ({ c, ...i })));
+
+    // Build the list of quarter keys to show.
+    let quarters;
+    if (allMode) {
+      const present = new Set(items.map((i) => quarterOf(i.date)));
+      quarters = [...present].sort();
+    } else {
+      quarters = [1, 2, 3, 4].map((q) => `${renewalYear}-Q${q}`);
+    }
+
+    const byQ = {}; quarters.forEach((q) => byQ[q] = { count: 0, mrr: 0, items: [] });
+    let outOfRange = 0;
+    items.forEach((i) => {
+      const q = quarterOf(i.date);
+      if (byQ[q]) { byQ[q].count++; byQ[q].mrr += i.mrr; byQ[q].items.push(i); }
+      else outOfRange++;
+    });
+    quarters.forEach((q) => byQ[q].items.sort((a, b) => a.date - b.date));
+
+    // Until the user manually expands/collapses, show every populated quarter
+    // expanded so client names are visible by default.
+    if (!renewalUserToggled) {
+      expandedQuarters.clear();
+      quarters.forEach((q) => { if (byQ[q].count) expandedQuarters.add(q); });
+    }
+
+    const shownCount = quarters.reduce((s, q) => s + byQ[q].count, 0);
+    const shownMrr = quarters.reduce((s, q) => s + byQ[q].mrr, 0);
+    const maxCount = Math.max(1, ...quarters.map((q) => byQ[q].count));
+    els.renewalHead.innerHTML = `<tr>
+      <th style="width:1%"></th><th>Quarter</th>
+      <th style="text-align:right">Renewals</th>
+      <th style="text-align:right">MRR to renew</th><th style="width:32%">Share</th></tr>`;
+
+    const renderBucket = (key, label, cell, extraCls) => {
+      const pct = Math.round((cell.count / maxCount) * 100);
+      const cls = cell.count ? 'q-has' : 'q-zero';
+      const open = expandedQuarters.has(key);
+      const caret = cell.count
+        ? `<button type="button" class="q-toggle" data-q="${key}" aria-expanded="${open}" aria-label="Show renewals in ${label}">${open ? '−' : '+'}</button>`
+        : '';
+      const mainRow = `<tr>
+        <td>${caret}</td>
+        <td class="${cls}" style="${extraCls || ''}">${label}</td>
+        <td class="num ${cls}">${cell.count.toLocaleString('en-GB')}</td>
+        <td class="num ${cls}">${cell.mrr ? fmtEur(cell.mrr) : '—'}</td>
+        <td class="barcell"><div class="bar" style="width:${pct}%"></div>
+            <span class="lbl">${cell.count ? pct + '%' : ''}</span></td>
+      </tr>`;
+      if (!open || !cell.count) return mainRow;
+      const list = cell.items.map((i) => {
+        const hv = i.mrr >= HIGH_VALUE_MRR;
+        return `
+        <div class="q-cust${hv ? ' q-highval' : ''}">
+          <span class="q-name">${nameLink(i.c, i.c.name || '—')}${csmOf(i.c) ? ` · ${esc(csmOf(i.c))}` : ''}${i.label ? ` · ${esc(i.label)}` : ''}</span>
+          <span class="q-meta">${fmtDate(i.date)}${i.mrr ? ` · MRR ${fmtEur(i.mrr)}` : ''}${i.status ? ` · ${esc(i.status)}` : ''}</span>
+        </div>`;
+      }).join('');
+      return mainRow + `<tr class="q-detail"><td colspan="5"><div class="q-list">${list}</div></td></tr>`;
+    };
+
+    let html = quarters.map((q) => renderBucket(q, q, byQ[q], '')).join('');
+    els.renewalBody.innerHTML = html || `<tr><td colspan="5" class="q-zero" style="padding:1rem;text-align:center">No renewals for the current filters.</td></tr>`;
+
+    // Year total: total MRR across the shown period, for the current mode.
+    const yearLabel = allMode ? 'all years' : renewalYear;
+    const modeLabel = renewalMode === 'outstanding' ? 'to renew' : 'due';
+    els.renewalBody.innerHTML += `<tr class="q-total"><td></td>
+      <td style="font-weight:600">Total ${esc(String(yearLabel))} — MRR ${modeLabel}</td>
+      <td class="num" style="font-weight:600">${shownCount.toLocaleString('en-GB')}</td>
+      <td class="num" style="font-weight:600">${shownMrr ? fmtEur(shownMrr) : '—'}</td>
+      <td></td></tr>`;
+
+    // Reconciliation line.
+    const withItems = rows.filter((c) => renewalItemsOf(c, renewalMode).length).length;
+    const parts = [`${shownCount} renewal(s) shown`];
+    if (!allMode && outOfRange) parts.push(`${outOfRange} in other years (switch tabs or use “All years”)`);
+    if (renewalMode === 'outstanding') {
+      // Count renewed licences excluded, so the override is visibly working.
+      const renewedExcluded = rows.reduce((n, c) => {
+        const ls = licensesByCompany.get(c._id || c.id) || [];
+        return n + ls.filter(licRenewed).length;
+      }, 0);
+      if (renewedExcluded) parts.push(`${renewedExcluded} renewed excluded`);
+    }
+    els.renewalBody.innerHTML += `<tr><td colspan="5" class="q-zero" style="padding:.6rem 1rem;font-size:.78rem;border-top:2px solid var(--border)">
+      ${withItems} filtered account(s) carry ${items.length} ${renewalMode === 'outstanding' ? 'outstanding' : 'due'} renewal(s) · ${parts.join(' · ')}</td></tr>`;
+  }
+
+  // ---------- Tab: CSM portfolios ----------
+  let portfolioSort = { key: 'mrr', dir: -1 };
+  function portfolioRows(rows) {
+    const map = new Map();
+    rows.forEach((c) => {
+      const k = csmKey(c);
+      if (!map.has(k)) map.set(k, { csm: k, accounts: 0, customers: 0, mrr: 0, arr: 0, hSum: 0, hN: 0, sSum: 0, sN: 0, renew90: 0 });
+      const p = map.get(k);
+      p.accounts++;
+      if (isCustomer(c)) p.customers++;
+      p.mrr += mrrOf(c); p.arr += arrOf(c);
+      const h = healthOf(c); if (h !== null) { p.hSum += h; p.hN++; }
+      const s = Number(c.csmScore); if (!isNaN(s) && c.csmScore !== undefined && c.csmScore !== null && c.csmScore !== '') { p.sSum += s; p.sN++; }
+      const d = daysUntilRenewal(c); if (d !== null && d >= 0 && d <= 90 && !isChurned(c)) p.renew90++;
+    });
+    return [...map.values()].map((p) => ({
+      ...p,
+      health: p.hN ? p.hSum / p.hN : null,
+      csmScore: p.sN ? p.sSum / p.sN : null,
+    }));
+  }
+  function renderPortfolios(rows) {
+    const data = portfolioRows(rows);
+    const { key, dir } = portfolioSort;
+    data.sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (key === 'csm') return String(av).localeCompare(String(bv)) * dir;
+      av = av === null ? -Infinity : av; bv = bv === null ? -Infinity : bv;
+      return (av - bv) * dir;
+    });
+    els.portfolioBody.innerHTML = data.map((p) => `<tr>
+      <td class="name">${esc(p.csm)}</td>
+      <td class="num">${p.accounts.toLocaleString('en-GB')}</td>
+      <td class="num">${fmtEur(p.mrr)}</td>
+      <td class="num">${fmtEur(p.arr)}</td>
+      <td class="num">${p.health === null ? '—' : p.health.toFixed(1)}</td>
+      <td class="num">${p.csmScore === null ? '—' : p.csmScore.toFixed(1)}</td>
+      <td class="num">${p.renew90.toLocaleString('en-GB')}</td>
+    </tr>`).join('');
+
+    const tot = data.reduce((t, p) => ({
+      accounts: t.accounts + p.accounts, customers: t.customers + p.customers,
+      mrr: t.mrr + p.mrr, arr: t.arr + p.arr, renew90: t.renew90 + p.renew90,
+    }), { accounts: 0, customers: 0, mrr: 0, arr: 0, renew90: 0 });
+    const allH = rows.map(healthOf).filter((v) => v !== null);
+    const avgH = allH.length ? (allH.reduce((a, b) => a + b, 0) / allH.length) : null;
+    els.portfolioFoot.innerHTML = `<tr>
+      <td class="name">All (${data.length} CSMs)</td>
+      <td class="num">${tot.accounts.toLocaleString('en-GB')}</td>
+      <td class="num">${fmtEur(tot.mrr)}</td>
+      <td class="num">${fmtEur(tot.arr)}</td>
+      <td class="num">${avgH === null ? '—' : avgH.toFixed(1)}</td>
+      <td class="num">—</td>
+      <td class="num">${tot.renew90.toLocaleString('en-GB')}</td>
+    </tr>`;
+    updatePortfolioArrows();
+  }
+
+  // ---------- Tab: Trends (CSM workload) ----------
+  const ONBOARDING_WEIGHT = 3;   // onboarding counts as 3× a renewal
+  const DEMAND_WEIGHT = 1;       // customer demand (avg convos/month) added as-is
+  const STRATEGY_WEIGHT = 2;     // each strategy session due ≤90d ~2× a renewal
+  let trendsSort = { key: 'workload', dir: -1 };
+  // Per-company effort data filled by "Calculate effort".
+  let effortCalculated = false;
+  const effortDemand = new Map();   // company _id -> conversations/month
+  const effortLastStrat = new Map(); // company _id -> last strategy session Date (or null)
+
+  // Is a customer's NEXT strategy session due within `days` days?
+  // Next due = last session + cadence (6mo premium / 12mo standard); if they've
+  // never had one, due = customerFrom + cadence.
+  function strategyDueWithin(c, days) {
+    const last = effortLastStrat.get(c._id || c.id) || null;
+    const { cadence } = planClass(c);
+    let anchor = last;
+    if (!anchor) {
+      const cf = c.customerFrom || c.customerFromDate || c.createDate || c.createdAt;
+      anchor = cf ? new Date(cf) : null;
+    }
+    if (!anchor || isNaN(anchor)) return true; // no basis → assume one is needed soon
+    const due = anchor.getTime() + cadence * MS_MONTH;
+    const daysUntil = (due - Date.now()) / 86400000;
+    return daysUntil <= days; // includes overdue (negative) and due within window
+  }
+
+  function trendsRows(rows) {
+    const map = new Map();
+    rows.forEach((c) => {
+      const k = csmKey(c);
+      if (!map.has(k)) map.set(k, { csm: k, onboarding: 0, due90: 0, due180: 0, _companies: [] });
+      const t = map.get(k);
+      if (isOnboarding(c)) t.onboarding++;
+      const d = daysUntilRenewal(c);
+      if (d !== null && !isChurned(c)) {
+        if (d >= 0) { if (d <= 90) t.due90++; if (d <= 180) t.due180++; }
+      }
+      t._companies.push(c);
+    });
+
+    return [...map.values()].map((t) => {
+      let demand = null, strategy = null;
+      if (effortCalculated) {
+        const dVals = t._companies.map((c) => effortDemand.get(c._id || c.id)).filter((v) => v != null);
+        demand = dVals.length ? dVals.reduce((a, b) => a + b, 0) / dVals.length : 0;
+        // Strategy sessions to deliver in the next 90 days across this portfolio.
+        strategy = t._companies.filter((c) => !isChurned(c) && strategyDueWithin(c, 90)).length;
+      }
+      const base = t.onboarding * ONBOARDING_WEIGHT + t.due90;
+      const workload = effortCalculated
+        ? base + demand * DEMAND_WEIGHT + strategy * STRATEGY_WEIGHT
+        : base;
+      return { ...t, demand, strategy, workload };
+    });
+  }
+
+  function renderTrends(rows) {
+    const data = trendsRows(rows);
+    const { key, dir } = trendsSort;
+    data.sort((a, b) => {
+      if (key === 'csm') return String(a.csm).localeCompare(String(b.csm)) * dir;
+      const av = a[key] === null ? -Infinity : a[key];
+      const bv = b[key] === null ? -Infinity : b[key];
+      return (av - bv) * dir;
+    });
+    const maxW = Math.max(1, ...data.map((t) => t.workload));
+    els.trendsBody.innerHTML = data.map((t) => {
+      const pct = Math.round((t.workload / maxW) * 100);
+      return `<tr>
+        <td class="name">${esc(t.csm)}</td>
+        <td class="num">${t.onboarding.toLocaleString('en-GB')}</td>
+        <td class="num">${t.due90.toLocaleString('en-GB')}</td>
+        <td class="num">${t.due180.toLocaleString('en-GB')}</td>
+        <td class="num">${t.demand === null ? '—' : t.demand.toFixed(1)}</td>
+        <td class="num">${t.strategy === null ? '—' : t.strategy.toLocaleString('en-GB')}</td>
+        <td class="barcell num"><div class="bar" style="width:${pct}%"></div>
+            <span class="lbl">${t.workload.toFixed(effortCalculated ? 1 : 0)}</span></td>
+      </tr>`;
+    }).join('');
+    updateTrendsArrows();
+    if (!effortCalculated && !els.effortStatus.textContent) {
+      els.effortStatus.textContent = 'Customer demand and strategy sessions not yet calculated — press Calculate effort. Workload = (onboarding × 3) + renewals ≤90d.';
+    }
+  }
+
+  // Fetch conversations once per filtered company; derive convos/month AND
+  // strategy-session count in the same pass (no extra API calls).
+  async function calculateEffort() {
+    const rows = filtered();
+    const range = resolveRange();
+    const uniq = new Map();
+    rows.forEach((c) => { const id = c._id || c.id; if (id) uniq.set(id, c); });
+    const list = [...uniq.values()];
+    if (!list.length) { els.effortStatus.textContent = 'No companies in the current filter.'; return; }
+
+    els.calcEffortBtn.disabled = true;
+    const spin = '<span class="spinner sm"></span>';
+    effortDemand.clear(); effortLastStrat.clear();
+    let done = 0, failed = 0;
+
+    for (const c of list) {
+      const id = c._id || c.id;
+      els.effortStatus.innerHTML = `${spin}Fetching conversations… ${done}/${list.length}`;
+      try {
+        // Demand uses conversations in the selected range; last-session scan needs
+        // full history, so fetch that separately (all-time) for the strategy due-date.
+        const convos = await fetchConversations(id, range);
+        let spanDays;
+        if (range.from) spanDays = Math.max(1, (range.to - range.from) / 86400000);
+        else {
+          const ds = convos.map((cv) => new Date(cv.date || cv.createDate || cv.createdAt).getTime()).filter((t) => !isNaN(t));
+          spanDays = ds.length ? Math.max(1, (Date.now() - Math.min(...ds)) / 86400000) : 30;
+        }
+        effortDemand.set(id, convos.length / Math.max(1 / 30, spanDays / 30));
+
+        // Find the most recent strategy session across all history.
+        const allConvos = range.from ? await fetchConversations(id, { from: null, to: new Date(), label: 'all time' }) : convos;
+        let last = null;
+        allConvos.forEach((cv) => {
+          if (isStrategySession(cv)) {
+            const d = cvCreatedDate(cv);
+            if (d && (!last || d > last)) last = d;
+          }
+        });
+        effortLastStrat.set(id, last);
+      } catch (err) {
+        failed++;
+        effortDemand.set(id, 0); effortLastStrat.set(id, null);
+        log(`Effort fetch failed for ${c.name}: ${err.message}`);
+      }
+      done++;
+    }
+
+    effortCalculated = true;
+    els.calcEffortBtn.disabled = false;
+    els.effortStatus.textContent = `Calculated over ${range.label} for ${list.length} companies`
+      + (failed ? ` (${failed} failed to load)` : '') + '. Workload = (onboarding × 3) + renewals ≤90d + customer demand + (strategy sessions due ≤90d × 2).';
+    if (activeTab === 'trends') renderTrends(filtered());
+  }
+
+  // ---------- Tab: Strategy sessions ----------
+  // A strategy session is a conversation with type "Strategic review session"
+  // (matched in isStrategySession); its date is createdAt.
+  const MS_MONTH = 30.4375 * 86400000;
+  const lastStrategyCache = new Map();  // company _id -> last strategy session Date (or null)
+  const strategyCountCache = new Map(); // company _id -> count of strategy sessions in scan
+  let strategyCalculated = false;
+
+  // Plan comes from the Product field. Premium tiers get a 6-month cadence,
+  // everything else 12 months.
+  const PREMIUM_RE = /premium|enterprise|advanced|\bpro\b|plus/i;
+  const productOf = (c) => {
+    const v = c.custom && (c.custom.Product || c.custom.product);
+    return v == null ? '' : String(v);
+  };
+  function planClass(c) {
+    const raw = productOf(c);
+    const isPremium = raw && PREMIUM_RE.test(raw);
+    return { raw, isPremium, cadence: isPremium ? 6 : 12 };
+  }
+
+  async function calculateStrategy() {
+    const rows = filtered();
+    const range = { from: null, to: new Date(), label: 'all time' }; // full history — go back as far as Planhat allows
+    const uniq = new Map();
+    rows.forEach((c) => { const id = c._id || c.id; if (id) uniq.set(id, c); });
+    const list = [...uniq.values()];
+    if (!list.length) { els.strategyStatus.textContent = 'No companies in the current filter.'; return; }
+
+    els.calcStrategyBtn.disabled = true;
+    const spin = '<span class="spinner sm"></span>';
+    let done = 0, failed = 0, withSession = 0, totalConvos = 0, totalSessions = 0, firstDiag = true;
+    for (const c of list) {
+      const id = c._id || c.id;
+      els.strategyStatus.innerHTML = `${spin}Scanning conversations for strategy sessions… ${done}/${list.length}`;
+      try {
+        const convos = await fetchConversations(id, range);
+        totalConvos += convos.length;
+        let last = null, count = 0;
+        convos.forEach((cv) => {
+          if (isStrategySession(cv)) {
+            count++;
+            const d = cvCreatedDate(cv);
+            if (d && (!last || d > last)) last = d;
+          }
+        });
+        totalSessions += count;
+        // Log a diagnostic for the first few companies so we can see what's coming back.
+        if (done < 3) {
+          const types = {};
+          convos.forEach((cv) => { const t = cv.type ?? '(none)'; types[t] = (types[t] || 0) + 1; });
+          log(`[strategy] "${c.name}" (${id}): ${convos.length} convos, ${count} strategy session(s). Types: ${Object.entries(types).map(([t, n]) => `"${t}"×${n}`).join(', ') || 'none'}`);
+        }
+        lastStrategyCache.set(id, last);
+        strategyCountCache.set(id, count);
+        if (last) withSession++;
+      } catch (err) {
+        failed++; lastStrategyCache.set(id, null); strategyCountCache.set(id, 0);
+        log(`Strategy fetch failed for ${c.name}: ${err.message}`);
+      }
+      done++;
+    }
+    strategyCalculated = true;
+    els.calcStrategyBtn.disabled = false;
+    els.strategyStatus.textContent = `Scanned ${list.length} customers · ${totalConvos.toLocaleString('en-GB')} conversations fetched · ${totalSessions} strategy sessions found · ${withSession} customers with a session`
+      + (failed ? ` (${failed} failed)` : '') + '. See debug log for per-company detail.';
+    if (totalConvos === 0) log('[strategy] WARNING: zero conversations returned for ALL companies. The /conversations endpoint is not returning data — likely the session cookie lacks conversation-read access, or the endpoint needs a different query. Click "Inspect conversation fields" for the raw HTTP status.');
+    renderStrategy(filtered());
+  }
+
+  // Build strategy status per company: last session, due date, overdue days.
+  function strategyRecords(rows) {
+    const now = Date.now();
+    return rows.map((c) => {
+      const id = c._id || c.id;
+      const { raw, isPremium, cadence } = planClass(c);
+      const last = lastStrategyCache.get(id) || null;
+      const sessions = strategyCountCache.get(id) || 0;
+      // Due date = one cadence period after the last session. If they've never
+      // had one, anchor to when they became a customer (or created), so an
+      // established customer with no session on record shows as overdue.
+      let anchor = last;
+      if (!anchor) {
+        const cf = c.customerFrom || c.customerFromDate || c.createDate || c.createdAt;
+        anchor = cf ? new Date(cf) : null;
+      }
+      let due, overdueDays;
+      if (anchor && !isNaN(anchor)) {
+        due = new Date(anchor.getTime() + cadence * MS_MONTH);
+        overdueDays = Math.floor((now - due.getTime()) / 86400000);
+      } else {
+        // No session and no anchor date at all → treat as due now (overdue by 0+).
+        due = new Date(now);
+        overdueDays = 0;
+      }
+      return {
+        c, id, name: c.name || '(unnamed)', csm: csmOf(c) || '(unassigned)',
+        planRaw: raw || '—', isPremium, cadence, last, sessions, due, overdueDays, neverHad: !last,
+      };
+    });
+  }
+
+  let overdueSort = { key: 'overdueDays', dir: -1 };
+  function renderStrategy(rows) {
+    if (!strategyCalculated) {
+      els.strategyResults.hidden = true;
+      els.strategyStatus.textContent = els.strategyStatus.textContent || 'Press “Calculate sessions” to scan the full conversation history and work out strategy-session status.';
+      return;
+    }
+    els.strategyResults.hidden = false;
+    const recs = strategyRecords(rows);
+
+    // ---- Overdue table ----
+    // Overdue = past due date, OR never held a session and due date has arrived.
+    const overdue = recs.filter((r) => r.overdueDays > 0 || (r.neverHad && r.overdueDays >= 0));
+    const { key, dir } = overdueSort;
+    overdue.sort((a, b) => {
+      if (key === 'name' || key === 'csm' || key === 'plan') {
+        const av = key === 'plan' ? a.planRaw : a[key];
+        const bv = key === 'plan' ? b.planRaw : b[key];
+        return String(av).localeCompare(String(bv)) * dir;
+      }
+      if (key === 'last' || key === 'due') {
+        const av = a[key] ? a[key].getTime() : 0, bv = b[key] ? b[key].getTime() : 0;
+        return (av - bv) * dir;
+      }
+      return (a.overdueDays - b.overdueDays) * dir;
+    });
+    els.overdueBody.innerHTML = overdue.map((r) => `<tr>
+      <td class="name">${nameLinkId(r.id, r.name)}</td>
+      <td>${esc(r.csm)}</td>
+      <td>${esc(r.planRaw)}${r.isPremium ? ' <span class="pill customer">premium</span>' : ' <span class="pill other">standard</span>'}</td>
+      <td class="num">${r.cadence} mo</td>
+      <td class="num">${r.last ? fmtDate(r.last) : 'never'}</td>
+      <td class="num">${fmtDate(r.due)}</td>
+      <td class="num" style="color:var(--red);font-weight:600">${r.overdueDays >= 30 ? Math.round(r.overdueDays / 30.4375) + ' mo' : r.overdueDays + ' d'}</td>
+    </tr>`).join('');
+    els.overdueEmpty.hidden = overdue.length > 0;
+    updateOverdueArrows();
+
+    // ---- Due-by-quarter table (this year + next) ----
+    const y0 = new Date().getFullYear();
+    const years = [y0, y0 + 1];
+    const quarters = [];
+    years.forEach((y) => [1, 2, 3, 4].forEach((q) => quarters.push(`${y}-Q${q}`)));
+    const byQ = {}; quarters.forEach((q) => byQ[q] = []);
+    // Only future-due (not overdue) sessions land in the quarter grid.
+    recs.filter((r) => r.overdueDays <= 0).forEach((r) => {
+      const q = quarterOf(r.due);
+      if (byQ[q]) byQ[q].push(r);
+    });
+    quarters.forEach((q) => byQ[q].sort((a, b) => a.due - b.due));
+
+    const maxN = Math.max(1, ...quarters.map((q) => byQ[q].length));
+    els.dueHead.innerHTML = `<tr><th style="width:1%"></th><th>Quarter</th>
+      <th style="text-align:right">Due</th><th style="width:40%">Share</th></tr>`;
+    els.dueBody.innerHTML = quarters.map((q) => {
+      const items = byQ[q];
+      const pct = Math.round((items.length / maxN) * 100);
+      const cls = items.length ? 'q-has' : 'q-zero';
+      const open = expandedStrategyQ.has(q);
+      const caret = items.length
+        ? `<button type="button" class="q-toggle" data-sq="${q}" aria-expanded="${open}">${open ? '−' : '+'}</button>` : '';
+      const main = `<tr>
+        <td>${caret}</td>
+        <td class="${cls}">${q}</td>
+        <td class="num ${cls}">${items.length.toLocaleString('en-GB')}</td>
+        <td class="barcell"><div class="bar" style="width:${pct}%"></div><span class="lbl">${items.length ? pct + '%' : ''}</span></td>
+      </tr>`;
+      if (!open || !items.length) return main;
+      const list = items.map((r) => `<div class="q-cust">
+        <span class="q-name">${nameLinkId(r.id, r.name)}${r.csm ? ` · ${esc(r.csm)}` : ''}${r.isPremium ? ' · premium' : ' · standard'}</span>
+        <span class="q-meta">due ${fmtDate(r.due)}${r.last ? ` · last ${fmtDate(r.last)}` : ' · never held'}</span>
+      </div>`).join('');
+      return main + `<tr class="q-detail"><td colspan="4"><div class="q-list">${list}</div></td></tr>`;
+    }).join('');
+  }
+  const expandedStrategyQ = new Set();
+  // ---------- Tab: Support ----------
+  let supportCalculated = false;
+  const supportData = new Map(); // company _id -> support metrics
+  let supportSort = { key: 'total', dir: -1 };
+
+  // Compute support metrics for one company's conversations over the range.
+  function computeSupport(convos, range) {
+    const now = Date.now();
+    const dated = convos.map((cv) => ({ cv, d: cvDate(cv) })).filter((x) => x.d).sort((a, b) => a.d - b.d);
+    const isSup = ({ cv }) => SUPPORT_RE.test(cvType(cv)) || SUPPORT_RE.test(cvText(cv));
+
+    let spanDays;
+    if (range.from) spanDays = Math.max(1, (range.to - range.from) / 86400000);
+    else spanDays = dated.length ? Math.max(1, (now - dated[0].d) / 86400000) : 30;
+    const months = Math.max(1 / 30, spanDays / 30);
+
+    const supportItems = dated.filter(isSup);
+    const total = supportItems.length;
+    const last30 = dated.filter(({ d }) => (now - d) <= 30 * 86400000).filter(isSup).length;
+    const prev90 = dated.filter(({ d }) => (now - d) > 30 * 86400000 && (now - d) <= 120 * 86400000).filter(isSup).length;
+    const prev90Avg30 = prev90 / 3;
+    const spike = prev90Avg30 ? (last30 / prev90Avg30) : (last30 ? Infinity : 0);
+
+    let maxRun = 0, run = 0;
+    dated.forEach((x) => { if (isSup(x)) { run++; maxRun = Math.max(maxRun, run); } else run = 0; });
+
+    return {
+      total, perMonth: total / months, pct: dated.length ? (total / dated.length * 100) : 0,
+      spike, maxRun, allConvos: dated.length,
+    };
+  }
+
+  async function calculateSupport() {
+    const rows = filtered();
+    const range = resolveRange();
+    const uniq = new Map();
+    rows.forEach((c) => { const id = c._id || c.id; if (id) uniq.set(id, c); });
+    const list = [...uniq.values()];
+    if (!list.length) { els.supportStatus.textContent = 'No companies in the current filter.'; return; }
+
+    els.calcSupportBtn.disabled = true;
+    const spin = '<span class="spinner sm"></span>';
+    supportData.clear();
+    let done = 0, failed = 0;
+    for (const c of list) {
+      const id = c._id || c.id;
+      els.supportStatus.innerHTML = `${spin}Fetching conversations… ${done}/${list.length}`;
+      try {
+        const convos = await fetchConversations(id, range);
+        supportData.set(id, computeSupport(convos, range));
+      } catch (err) {
+        failed++; supportData.set(id, null);
+        log(`Support fetch failed for ${c.name}: ${err.message}`);
+      }
+      done++;
+    }
+    supportCalculated = true;
+    els.calcSupportBtn.disabled = false;
+    els.supportStatus.textContent = `Calculated over ${resolveRange().label} for ${list.length} accounts`
+      + (failed ? ` (${failed} failed)` : '') + '.';
+    els.supportWrap.hidden = false;
+    if (activeTab === 'support') renderSupport(filtered());
+  }
+
+  function renderSupport(rows) {
+    if (!supportCalculated) {
+      els.supportWrap.hidden = true;
+      els.supportStatus.textContent = els.supportStatus.textContent || 'Press “Calculate support” to fetch conversations and rank accounts by support burden.';
+      return;
+    }
+    els.supportWrap.hidden = false;
+    // Build rows from filtered accounts that have support data.
+    const data = rows.map((c) => {
+      const m = supportData.get(c._id || c.id);
+      if (!m) return null;
+      return { id: c._id || c.id, name: c.name || '(unnamed)', csm: csmOf(c) || '(unassigned)', ...m };
+    }).filter(Boolean);
+
+    const { key, dir } = supportSort;
+    data.sort((a, b) => {
+      if (key === 'name' || key === 'csm') return String(a[key]).localeCompare(String(b[key])) * dir;
+      const av = a[key] === Infinity ? 1e9 : a[key];
+      const bv = b[key] === Infinity ? 1e9 : b[key];
+      return (av - bv) * dir;
+    });
+
+    els.supportBody.innerHTML = data.map((r) => {
+      const spikeTxt = r.spike === Infinity ? 'new' : r.spike ? r.spike.toFixed(1) + '×' : '—';
+      const spikeStyle = (r.spike === Infinity || r.spike >= 2) ? 'color:var(--red);font-weight:600'
+        : r.spike >= 1.3 ? 'color:var(--amber)' : '';
+      return `<tr>
+        <td class="name">${nameLinkId(r.id, r.name)}</td>
+        <td>${esc(r.csm)}</td>
+        <td class="num">${r.total.toLocaleString('en-GB')}</td>
+        <td class="num">${r.perMonth.toFixed(1)}</td>
+        <td class="num">${Math.round(r.pct)}%</td>
+        <td class="num" style="${spikeStyle}">${spikeTxt}</td>
+        <td class="num">${r.maxRun.toLocaleString('en-GB')}</td>
+        <td class="num">${r.allConvos.toLocaleString('en-GB')}</td>
+      </tr>`;
+    }).join('');
+    updateSupportArrows();
+  }
+
+  function updateSupportArrows() {
+    document.querySelectorAll('#supportTbl thead th[data-skey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.skey === supportSort.key, supportSort.dir);
+    });
+  }
+
+  // ---------- Tab: Activity ----------
+  let activityCalculated = false;
+  let activityData = null;   // { total, months, byType: Map(label -> {count, accounts:Set}) }
+  let activitySort = { key: 'count', dir: -1 };
+
+  async function calculateActivity() {
+    const rows = filtered();
+    const range = resolveRange();
+    const uniq = new Map();
+    rows.forEach((c) => { const id = c._id || c.id; if (id) uniq.set(id, c); });
+    const list = [...uniq.values()];
+    if (!list.length) { els.activityStatus.textContent = 'No companies in the current filter.'; return; }
+
+    els.calcActivityBtn.disabled = true;
+    const spin = '<span class="spinner sm"></span>';
+    const byType = new Map();   // display label -> { count, accounts:Set }
+    let total = 0, failed = 0, done = 0;
+    for (const c of list) {
+      const id = c._id || c.id;
+      els.activityStatus.innerHTML = `${spin}Fetching conversations… ${done}/${list.length}`;
+      try {
+        const convos = await fetchConversations(id, range);
+        convos.forEach((cv) => {
+          // Use the original type label (not lowercased) for display; fall back
+          // to a readable placeholder when a conversation has no type.
+          const label = (cv.type != null && String(cv.type).trim()) ? String(cv.type).trim() : '(no type)';
+          if (!byType.has(label)) byType.set(label, { count: 0, accounts: new Set() });
+          const e = byType.get(label); e.count++; e.accounts.add(id); total++;
+        });
+      } catch (err) {
+        failed++; log(`Activity fetch failed for ${c.name}: ${err.message}`);
+      }
+      done++;
+    }
+    // Months spanned by the range, for per-month averages.
+    let months = 1;
+    if (range.from) months = Math.max(1, (range.to - range.from) / (86400000 * 30.4375));
+    else if (total) months = 12;   // "all time" — rough monthly rate over a year
+    activityData = { total, months, byType, label: range.label, accounts: list.length };
+    activityCalculated = true;
+    els.calcActivityBtn.disabled = false;
+    els.activityStatus.textContent = `Tallied ${total.toLocaleString('en-GB')} conversations over ${range.label} across ${list.length} accounts`
+      + (failed ? ` (${failed} failed)` : '') + '.';
+    if (activeTab === 'activity') renderActivity();
+  }
+
+  function renderActivity() {
+    if (!activityCalculated || !activityData) {
+      els.activityWrap.hidden = true;
+      els.activitySummary.hidden = true;
+      els.activityStatus.textContent = els.activityStatus.textContent || 'Press “Calculate activity” to fetch conversations and break them down by type.';
+      return;
+    }
+    const { total, months, byType } = activityData;
+    // Summary cards.
+    els.activitySummary.hidden = false;
+    const typeCount = byType.size;
+    const perMonthTotal = months ? total / months : total;
+    els.activitySummary.innerHTML = `
+      <div class="metric"><div class="mlabel">Conversations</div><div class="mval">${total.toLocaleString('en-GB')}</div></div>
+      <div class="metric"><div class="mlabel">Distinct types</div><div class="mval">${typeCount}</div></div>
+      <div class="metric"><div class="mlabel">Per month</div><div class="mval">${perMonthTotal.toFixed(1)}</div></div>
+      <div class="metric"><div class="mlabel">Range</div><div class="mval" style="font-size:1rem">${esc(activityData.label)}</div></div>`;
+
+    els.activityWrap.hidden = false;
+    const data = [...byType.entries()].map(([type, e]) => ({
+      type, count: e.count, accounts: e.accounts.size,
+      pct: total ? (e.count / total) * 100 : 0,
+      perMonth: months ? e.count / months : e.count,
+    }));
+    const { key, dir } = activitySort;
+    data.sort((a, b) => key === 'type' ? String(a.type).localeCompare(String(b.type)) * dir : (a[key] - b[key]) * dir);
+
+    const maxCount = Math.max(1, ...data.map((d) => d.count));
+    els.activityBody.innerHTML = data.map((d) => `<tr>
+      <td class="name">${esc(d.type)}</td>
+      <td class="num">${d.count.toLocaleString('en-GB')}</td>
+      <td class="num">${d.pct.toFixed(1)}%</td>
+      <td class="num">${d.perMonth.toFixed(1)}</td>
+      <td class="num">${d.accounts.toLocaleString('en-GB')}</td>
+      <td class="barcell"><div class="bar" style="width:${Math.round((d.count / maxCount) * 100)}%"></div>
+          <span class="lbl">${d.pct.toFixed(0)}%</span></td>
+    </tr>`).join('');
+    els.activityBody.innerHTML += `<tr class="q-total"><td style="font-weight:600">All types</td>
+      <td class="num" style="font-weight:600">${total.toLocaleString('en-GB')}</td>
+      <td class="num" style="font-weight:600">100%</td>
+      <td class="num" style="font-weight:600">${perMonthTotal.toFixed(1)}</td>
+      <td></td><td></td></tr>`;
+    updateActivityArrows();
+  }
+  function updateActivityArrows() {
+    document.querySelectorAll('#activityTbl thead th[data-akey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.akey === activitySort.key, activitySort.dir);
+    });
+  }
+
+  function updateOverdueArrows() {
+    document.querySelectorAll('#overdueTbl thead th[data-okey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.okey === overdueSort.key, overdueSort.dir);
+    });
+  }
+
+  function arrowFor(th, base, isActive, dir) {
+    th.innerHTML = esc(base) + (isActive ? `<span class="arrow">${dir === 1 ? '▲' : '▼'}</span>` : '');
+    th.setAttribute('aria-sort', isActive ? (dir === 1 ? 'ascending' : 'descending') : 'none');
+  }
+  function updateHeaderArrows() {
+    document.querySelectorAll('#tbl thead th[data-key]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.key === sortKey, sortDir);
+    });
+  }
+  function updatePortfolioArrows() {
+    document.querySelectorAll('#portfolioTbl thead th[data-pkey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.pkey === portfolioSort.key, portfolioSort.dir);
+    });
+  }
+  function updateTrendsArrows() {
+    document.querySelectorAll('#trendsTbl thead th[data-tkey]').forEach((th) => {
+      const base = th.textContent.replace(/[▲▼]\s*$/, '').trim();
+      arrowFor(th, base, th.dataset.tkey === trendsSort.key, trendsSort.dir);
+    });
+  }
+
+  // ---------- CSV ----------
+  function exportCsv() {
+    // Mirror the table: one row per ongoing licence (or one company-level row
+    // for accounts with no licence records).
+    const entries = els.tbody._entries || (els.tbody._rows || []).map((c) => ({ c, lic: null, index: 0, total: 0, isExtra: false }));
+    const cols = ['name', '_lictype', '_licseq', 'product', '_csm', '_locale', 'status', 'phase', 'h', 'mrr', 'arr', 'renewalDate', 'updatedAt', '_id'];
+    const head = ['Name', 'Type', 'Licence #', 'Product', 'CSM', 'Locale', 'Status', 'Phase', 'Health', 'MRR', 'ARR', 'Renewal date', 'Updated', 'Planhat ID'];
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [head.map(cell).join(',')];
+    const pick = (e, k) => {
+      const c = e.c;
+      if (k === 'mrr') return e.lic ? licMrr(e.lic) : mrrOf(c);
+      if (k === 'arr') return e.lic ? licArr(e.lic) : arrOf(c);
+      if (k === 'renewalDate') { const d = e.lic ? licDate(e.lic) : renewalOf(c); return d ? fmtDate(d) : ''; }
+      if (k === '_lictype') return e.total ? (e.isExtra ? 'extra' : 'main') : '';
+      if (k === '_licseq') return e.total ? `${e.index}/${e.total}` : '';
+      if (k === 'product') return e.lic ? licLabel(e.lic) : '';
+      if (k === '_csm') return csmOf(c);
+      if (k === '_locale') return localeOf(c);
+      return c[k];
+    };
+    entries.forEach((e) => lines.push(cols.map((k) => cell(pick(e, k))).join(',')));
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `planhat-companies-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log(`Exported ${lines.length - 1} rows to CSV.`);
+  }
+
+  // ---------- Tab switching ----------
+  function selectTab(name) {
+    activeTab = name;
+    ['accounts', 'renewals', 'portfolios', 'trends', 'strategy', 'support', 'activity'].forEach((t) => {
+      const tab = $('tab-' + t), panel = $('panel-' + t);
+      const on = t === name;
+      tab.setAttribute('aria-selected', String(on));
+      panel.hidden = !on;
+    });
+    render();
+  }
+  els.tabs.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab'); if (!tab) return;
+    selectTab(tab.id.replace('tab-', ''));
+  });
+
+  // Company-name links anywhere in the app open that company's health drawer.
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('.co-link'); if (!link) return;
+    e.preventDefault();
+    if (!els.churnModal.hidden) closeChurnModal();   // if opened from the churn popup, close it first
+    const c = companyById(link.dataset.companyId);
+    if (c) openHealthDrawer(c);
+  });
+
+  // ---------- Events ----------
+  els.loadBtn.addEventListener('click', loadCompanies);
+  els.reconnectBtn.addEventListener('click', () => {
+    els.connectIntro.textContent = 'Paste a fresh session cookie to reconnect. Your current data stays loaded until you run a new query.';
+    prepCookieForEntry();   // clear & un-blur, ready for the new cookie
+    els.connectScreen.hidden = false;
+    els.cookieVal.focus();
+  });
+  els.saveCookie.addEventListener('click', loadCompanies);
+  els.cookieVal.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadCompanies(); });
+  // Rebuild the CSM filter's option list to reflect the other filters, but only
+  // when the CSM menu is closed so we don't disrupt an in-progress interaction.
+  function refreshCsmFilter() { if (els.fCsmMenu.hidden) buildCsmMenu(); }
+
+  [els.q, els.fPhase, els.fLocale].forEach((el) => el.addEventListener('input', () => { refreshCsmFilter(); render(); }));
+  els.csvBtn.addEventListener('click', exportCsv);
+  els.hideExtra.addEventListener('change', () => { if (activeTab === 'accounts') renderAccounts(filtered()); });
+
+  // Status multi-select: open/close the menu
+  els.fStatusBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = els.fStatusMenu.hidden;
+    els.fStatusMenu.hidden = !open;
+    els.fStatusBtn.setAttribute('aria-expanded', String(open));
+  });
+  els.fStatusMenu.addEventListener('click', (e) => {
+    const act = e.target.closest('button[data-act]');
+    if (act) {
+      if (act.dataset.act === 'all') {
+        selectedStatuses = new Set([...els.fStatusMenu.querySelectorAll('input[type=checkbox]')].map((i) => i.value));
+      } else {
+        selectedStatuses.clear();
+      }
+      els.fStatusMenu.querySelectorAll('input[type=checkbox]').forEach((i) => { i.checked = selectedStatuses.has(i.value); });
+      updateStatusButton();
+      refreshCsmFilter();
+      render();
+    }
+  });
+  els.fStatusMenu.addEventListener('change', (e) => {
+    const cb = e.target.closest('input[type=checkbox]'); if (!cb) return;
+    if (cb.checked) selectedStatuses.add(cb.value); else selectedStatuses.delete(cb.value);
+    updateStatusButton();
+    refreshCsmFilter();
+    render();
+  });
+
+  // CSM multi-select: open/close the menu
+  els.fCsmBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = els.fCsmMenu.hidden;
+    els.fCsmMenu.hidden = !open;
+    els.fCsmBtn.setAttribute('aria-expanded', String(open));
+  });
+  // Checkbox changes + select-all/clear
+  els.fCsmMenu.addEventListener('click', (e) => {
+    const act = e.target.closest('button[data-act]');
+    if (act) {
+      if (act.dataset.act === 'all') {
+        selectedCsms = new Set([...els.fCsmMenu.querySelectorAll('input[type=checkbox]')].map((i) => i.value));
+      } else {
+        selectedCsms.clear();
+      }
+      els.fCsmMenu.querySelectorAll('input[type=checkbox]').forEach((i) => { i.checked = selectedCsms.has(i.value); });
+      updateCsmButton();
+      render();
+    }
+  });
+  els.fCsmMenu.addEventListener('change', (e) => {
+    const cb = e.target.closest('input[type=checkbox]'); if (!cb) return;
+    if (cb.checked) selectedCsms.add(cb.value); else selectedCsms.delete(cb.value);
+    updateCsmButton();
+    render();
+  });
+  // Close the menus when clicking outside them
+  document.addEventListener('click', (e) => {
+    if (!els.fCsmWrap.contains(e.target)) {
+      els.fCsmMenu.hidden = true;
+      els.fCsmBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (!els.fStatusWrap.contains(e.target)) {
+      els.fStatusMenu.hidden = true;
+      els.fStatusBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Year sub-tabs on the renewals tab
+  els.yearTabs.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-year]'); if (!btn) return;
+    renewalYear = btn.dataset.year === 'all' ? 'all' : Number(btn.dataset.year);
+    renewalUserToggled = false;  // re-auto-expand for the newly selected year
+    expandedQuarters.clear();
+    buildYearTabs();
+    render();
+  });
+
+  // Due vs Outstanding toggle
+  function setRenewalMode(mode) {
+    renewalMode = mode;
+    renewalUserToggled = false;  // re-auto-expand for the new view
+    els.renewDueBtn.classList.toggle('active', mode === 'due');
+    els.renewDueBtn.setAttribute('aria-pressed', String(mode === 'due'));
+    els.renewOutBtn.classList.toggle('active', mode === 'outstanding');
+    els.renewOutBtn.setAttribute('aria-pressed', String(mode === 'outstanding'));
+    els.renewUpsellBtn.classList.toggle('active', mode === 'upsell');
+    els.renewUpsellBtn.setAttribute('aria-pressed', String(mode === 'upsell'));
+    // Year tabs don't apply to the upsell view (it's not bucketed by quarter).
+    els.yearTabs.style.visibility = mode === 'upsell' ? 'hidden' : '';
+    if (activeTab === 'renewals') render();
+  }
+  els.renewDueBtn.addEventListener('click', () => setRenewalMode('due'));
+  els.renewOutBtn.addEventListener('click', () => setRenewalMode('outstanding'));
+  els.renewUpsellBtn.addEventListener('click', () => setRenewalMode('upsell'));
+
+  // Expand/collapse a quarter's customer list; sort the upsell table
+  els.renewalBody.addEventListener('click', (e) => {
+    // Upsell "Other / earlier years" collapse toggle
+    if (e.target.closest('#upsellOtherToggle')) {
+      expandedOther = !expandedOther;
+      renderUpsells(filtered());
+      return;
+    }
+    const btn = e.target.closest('.q-toggle');
+    if (btn) {
+      const q = btn.dataset.q;
+      renewalUserToggled = true;  // respect manual choices from here on
+      if (expandedQuarters.has(q)) expandedQuarters.delete(q); else expandedQuarters.add(q);
+      render();
+    }
+  });
+  // Upsell table sorting (header lives in renewalHead)
+  els.renewalHead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-ukey]'); if (!th) return;
+    const key = th.dataset.ukey;
+    if (upsellSort.key === key) upsellSort.dir *= -1;
+    else upsellSort = { key, dir: (key === 'name' || key === 'csm' || key === 'label') ? 1 : -1 };
+    renderUpsells(filtered());
+  });
+
+  // Sorting — Accounts table
+  const accHead = document.querySelector('#tbl thead');
+  accHead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-key]'); if (!th) return;
+    const key = th.dataset.key;
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+    render();
+  });
+  accHead.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('th[data-key]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  // Sorting — CSM portfolios table
+  const pfHead = document.querySelector('#portfolioTbl thead');
+  pfHead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-pkey]'); if (!th) return;
+    const key = th.dataset.pkey;
+    if (portfolioSort.key === key) portfolioSort.dir *= -1;
+    else portfolioSort = { key, dir: key === 'csm' ? 1 : -1 };
+    render();
+  });
+  pfHead.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('th[data-pkey]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  // Sorting — Trends table
+  const trHead = document.querySelector('#trendsTbl thead');
+  trHead.addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-tkey]'); if (!th) return;
+    const key = th.dataset.tkey;
+    if (trendsSort.key === key) trendsSort.dir *= -1;
+    else trendsSort = { key, dir: key === 'csm' ? 1 : -1 };
+    render();
+  });
+  trHead.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('th[data-tkey]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  // Row detail toggle (raw JSON — doubles as field discovery for the next iteration)
+  els.tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-detail]');
+    if (btn) {
+      const tr = btn.closest('tr');
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      const existing = tr.nextElementSibling;
+      if (existing && existing.classList.contains('detail')) existing.remove();
+      btn.setAttribute('aria-expanded', String(!open));
+      if (!open) {
+        const row = (els.tbody._rows || [])[Number(btn.dataset.detail)];
+        const detail = document.createElement('tr');
+        detail.className = 'detail';
+        detail.innerHTML = `<td colspan="12">${esc(JSON.stringify(row, null, 2))}</td>`;
+        tr.after(detail);
+      }
+      return;
+    }
+    // Row click (anywhere else) → open the health drawer for that company.
+    const openRow = e.target.closest('tr[data-open]');
+    if (openRow) {
+      const c = (els.tbody._rows || [])[Number(openRow.dataset.open)];
+      if (c) openHealthDrawer(c);
+    }
+  });
+
+  // ---------- CSV import (bridge while there's no API token) ----------
+  // Parses a Planhat in-app export client-side; nothing is uploaded anywhere.
+  function parseCsv(text) {
+    const rows = []; let row = [], field = '', inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else inQ = false; }
+        else field += ch;
+      } else if (ch === '"') inQ = true;
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        row.push(field); field = '';
+        if (row.length > 1 || row[0] !== '') rows.push(row);
+        row = [];
+      } else field += ch;
+    }
+    if (field !== '' || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  const HEADER_MAP = {
+    name: 'name', company: 'name', companyname: 'name',
+    status: 'status', phase: 'phase',
+    health: 'h', h: 'h', healthscore: 'h',
+    csmscore: 'csmScore', csm: '_csm', owner: '_csm', ownername: '_csm', accountowner: '_csm', csmowner: '_csm',
+    mrr: 'mrr', mr: 'mrr', arr: 'arr',
+    renewaldate: 'renewalDate', renewal: 'renewalDate',
+    updatedat: 'updatedAt', updated: 'updatedAt', lastupdated: 'updatedAt',
+    domains: 'domains', domain: 'domains', website: 'domains',
+    countrylocale: '_locale', locale: '_locale', country: 'country',
+    id: '_id', planhatid: '_id',
+  };
+
+  els.csvFile.addEventListener('change', async () => {
+    const file = els.csvFile.files[0];
+    if (!file) return;
+    try {
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) { setStatus('That CSV has a header but no data rows.', 'err'); return; }
+      const headers = rows[0].map((h) => h.trim());
+      const keys = headers.map((h) => HEADER_MAP[h.toLowerCase().replace(/[^a-z0-9]/g, '')] || h);
+      companies = rows.slice(1).map((r) => {
+        const o = {};
+        keys.forEach((k, i) => { if (r[i] !== undefined && r[i] !== '') o[k] = r[i]; });
+        return o;
+      });
+      els.queryShown.textContent = 'CSV import — ' + file.name;
+      log(`CSV import: ${file.name}, ${companies.length} rows. Headers: ${headers.join(', ')}`);
+      setStatus(`Loaded ${companies.length.toLocaleString('en-GB')} companies from ${file.name}.`, 'ok');
+      buildFilterOptions();
+      buildYearTabs();
+      els.filterPanel.hidden = false;
+      els.summary.hidden = false;
+      els.tabs.hidden = false;
+      selectTab(activeTab);
+    } catch (err) {
+      setStatus('Could not read that CSV: ' + err.message, 'err');
+      log('ERROR: ' + err.message);
+    } finally {
+      els.csvFile.value = '';
+    }
+  });
+
+  // ---------- Date range for health data ----------
+  els.fRange.addEventListener('change', () => {
+    els.customRangeWrap.style.display = els.fRange.value === 'custom' ? '' : 'none';
+    // A range change invalidates previously-calculated effort (demand + strategy).
+    effortCalculated = false;
+    effortDemand.clear(); effortLastStrat.clear();
+    supportCalculated = false; supportData.clear();
+    els.supportStatus.textContent = '';
+    els.effortStatus.textContent = '';
+    if (activeTab === 'trends') render();
+  });
+  els.calcEffortBtn.addEventListener('click', calculateEffort);
+
+  // Strategy sessions tab
+  els.calcStrategyBtn.addEventListener('click', calculateStrategy);
+  els.calcSupportBtn.addEventListener('click', calculateSupport);
+  document.querySelector('#supportTbl thead').addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-skey]'); if (!th) return;
+    const key = th.dataset.skey;
+    if (supportSort.key === key) supportSort.dir *= -1;
+    else supportSort = { key, dir: (key === 'name' || key === 'csm') ? 1 : -1 };
+    renderSupport(filtered());
+  });
+  els.calcActivityBtn.addEventListener('click', calculateActivity);
+  document.querySelector('#activityTbl thead').addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-akey]'); if (!th) return;
+    const key = th.dataset.akey;
+    if (activitySort.key === key) activitySort.dir *= -1;
+    else activitySort = { key, dir: key === 'type' ? 1 : -1 };
+    renderActivity();
+  });
+
+  // Diagnostic: dump a sample of one customer's conversations to the debug log,
+  // so we can see exactly which field holds the "Strategy Session" tag.
+  $('inspectConvBtn').addEventListener('click', async () => {
+    const rows = filtered();
+    const withId = rows.find((c) => c._id || c.id);
+    if (!withId) { els.strategyStatus.textContent = 'No company with an ID in the current filter.'; return; }
+    els.strategyStatus.innerHTML = '<span class="spinner sm"></span>Fetching a sample…';
+    try {
+      // Raw proxy call first, so we can see the actual HTTP status and payload
+      // shape — this distinguishes "endpoint/auth problem" from "genuinely none".
+      const cid = withId._id || withId.id;
+      const rawRes = await fetch(PROXY, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: storedKey, cookie: currentCookie(), baseUrl: BASE, path: 'conversations', query: { companyId: cid, limit: 3 } }),
+      });
+      const rawPayload = await rawRes.json().catch(() => null);
+      log(`--- Conversation fetch diagnostic for "${withId.name}" (id ${cid}) ---`);
+      log(`Proxy HTTP ${rawRes.status}; Planhat status ${rawPayload && rawPayload.status}; ok=${rawPayload && rawPayload.ok}`);
+      log(`Request URL: ${rawPayload && rawPayload.url}`);
+      if (rawPayload && !rawPayload.ok) {
+        log('Planhat returned an error payload: ' + JSON.stringify(rawPayload.data).slice(0, 500));
+      }
+      const convos = await fetchConversations(cid, { from: null, to: new Date(), label: 'all time' });
+      log(`Total conversations returned across pages: ${convos.length}`);
+      if (!convos.length) { log('→ Zero conversations. If Planhat status was 200 with an empty array, this company genuinely has none reachable via the API with the current credential/permissions. If status was 4xx, it is an auth or endpoint issue.'); }
+      else {
+        // Show the full first record, and list distinct keys + any value containing "strategy".
+        log('First conversation (full JSON):');
+        log(JSON.stringify(convos[0], null, 2).slice(0, 4000));
+        const keys = new Set();
+        convos.forEach((cv) => Object.keys(cv).forEach((k) => keys.add(k)));
+        log('All field names seen across conversations: ' + [...keys].sort().join(', '));
+        // Distinct conversation `type` values and their counts — this is what
+        // strategy-session detection keys on.
+        const typeCounts = {};
+        convos.forEach((cv) => { const t = cv.type ?? '(none)'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
+        log('Distinct "type" values: ' + Object.entries(typeCounts).map(([t, n]) => `"${t}"×${n}`).join(', '));
+        const hits = [];
+        convos.forEach((cv, i) => {
+          Object.entries(cv).forEach(([k, v]) => {
+            const s = typeof v === 'string' ? v : JSON.stringify(v);
+            if (s && /strateg/i.test(s)) hits.push(`  [conv ${i}] ${k} = ${s.slice(0, 120)}`);
+          });
+        });
+        log(hits.length ? 'Fields containing "strateg":\n' + hits.slice(0, 20).join('\n')
+                        : 'No field in any conversation contains "strateg" — the tag may be under a coded ID, or these conversations have none.');
+        const sessions = convos.filter(isStrategySession);
+        log(`Detected ${sessions.length} strategy session(s) (type = "Strategic review session").`);
+        sessions.slice(0, 10).forEach((cv, i) => {
+          log(`  [${i}] createdAt=${cv.createdAt || '?'} | date=${cv.date || '?'} | updatedAt=${cv.updatedAt || '?'} → using ${cvCreatedDate(cv) ? cvCreatedDate(cv).toISOString().slice(0, 10) : '?'}`);
+        });
+      }
+      els.strategyStatus.textContent = `Dumped ${withId.name}'s conversation fields to the debug log (expand it at the bottom).`;
+    } catch (err) {
+      els.strategyStatus.textContent = 'Inspect failed: ' + err.message;
+      log('Inspect error: ' + err.message);
+    }
+  });
+  els.overdueBody.addEventListener('click', () => {}); // placeholder, sorting handled on thead
+  document.querySelector('#overdueTbl thead').addEventListener('click', (e) => {
+    const th = e.target.closest('th[data-okey]'); if (!th) return;
+    const key = th.dataset.okey;
+    if (overdueSort.key === key) overdueSort.dir *= -1;
+    else overdueSort = { key, dir: (key === 'name' || key === 'csm' || key === 'plan') ? 1 : -1 };
+    renderStrategy(filtered());
+  });
+  els.dueBody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.q-toggle'); if (!btn) return;
+    const q = btn.dataset.sq;
+    if (expandedStrategyQ.has(q)) expandedStrategyQ.delete(q); else expandedStrategyQ.add(q);
+    renderStrategy(filtered());
+  });
+
+  // Resolve the current selection to { from: Date|null, to: Date, label }.
+  function resolveRange() {
+    const v = els.fRange.value;
+    const now = new Date();
+    if (v === 'custom') {
+      const from = els.rangeFrom.value ? new Date(els.rangeFrom.value + 'T00:00:00') : null;
+      const to = els.rangeTo.value ? new Date(els.rangeTo.value + 'T23:59:59') : now;
+      return { from, to, label: `${from ? fmtDate(from) : 'start'} – ${fmtDate(to)}` };
+    }
+    const days = Number(v);
+    if (!days) return { from: null, to: now, label: 'all time' };
+    const from = new Date(now.getTime() - days * 86400000);
+    return { from, to: now, label: `last ${days} days` };
+  }
+
+  // ---------- Conversation fetch (per company, scoped to the range) ----------
+  async function fetchConversations(companyId, range) {
+    const all = [];
+    let offset = 0;
+    const LIM = 2000;
+    const base = { companyId, limit: LIM };
+    while (offset < 20000) {
+      const q = Object.assign({}, base, { offset });
+      const batch = await proxyGet('conversations', q);
+      if (!Array.isArray(batch)) throw new Error('Unexpected /conversations response (expected an array).');
+      all.push(...batch);
+      if (batch.length < LIM) break;
+      offset += LIM;
+    }
+    // Guard against the endpoint ignoring the companyId filter and returning
+    // conversations for many companies: keep only this company's records.
+    // A conversation links to its company via companyId or parentObject/path.
+    const belongs = (cv) => {
+      if (cv.companyId === companyId) return true;
+      if (cv.parentObject && cv.parentObject.id === companyId) return true;
+      if (Array.isArray(cv.path) && cv.path.some((p) => p && p.id === companyId)) return true;
+      // If the record carries no company linkage field at all, don't discard it
+      // (the API may already have filtered server-side).
+      return cv.companyId === undefined && !cv.parentObject && !cv.path;
+    };
+    const mine = all.filter(belongs);
+
+    // Client-side range clamp for the demand/health windows.
+    if (range && range.from) {
+      const f = range.from.getTime(), t = range.to.getTime();
+      return mine.filter((cv) => {
+        const d = new Date(cv.date || cv.createdAt || cv.createDate).getTime();
+        return !isNaN(d) && d >= f && d <= t;
+      });
+    }
+    return mine;
+  }
+
+  // ---------- Metrics engine ----------
+  const KW = { escalation: /escalat/i, urgent: /urgent/i, critical: /critical/i, executive: /executive/i, complaint: /complaint/i };
+  const SUPPORT_RE = /support|ticket|issue|bug|helpdesk|zendesk|freshdesk|intercom/i;
+  const SUCCESS_RE = /review|qbr|advisor|training|strategic|success|kickoff|onboarding|ebr/i;
+
+  const cvDate = (cv) => {
+    const d = new Date(cv.date || cv.createDate || cv.createdAt);
+    return isNaN(d) ? null : d;
+  };
+  // Strategy sessions are dated by createdAt (when the session record was
+  // created), not the updated/last-activity date.
+  const cvCreatedDate = (cv) => {
+    const d = new Date(cv.createdAt || cv.createDate || cv.created || cv.date);
+    return isNaN(d) ? null : d;
+  };
+  const cvType = (cv) => String(cv.type || cv.conversationType || 'unknown').toLowerCase();
+  const cvText = (cv) => `${cv.subject || ''} ${cv.snippet || ''} ${(cv.description || '')}`;
+
+  // A strategy session is a conversation whose type is one of the tenant's
+  // strategy-session labels. This tenant uses both "Strategic review session"
+  // and "Strategy Session". Dated by createdAt.
+  const STRATEGY_TYPES = new Set(['strategic review session', 'strategy session']);
+  const isStrategySession = (cv) =>
+    STRATEGY_TYPES.has(String(cv.type || '').trim().toLowerCase());
+
+  function computeHealth(convos, range, company) {
+    const now = Date.now();
+    const dated = convos.map((cv) => ({ cv, d: cvDate(cv) })).filter((x) => x.d).sort((a, b) => a.d - b.d);
+    const dates = dated.map((x) => x.d);
+    const total = dated.length;
+
+    // Period span in months (for per-month rates)
+    let spanDays;
+    if (range.from) spanDays = Math.max(1, (range.to - range.from) / 86400000);
+    else if (dates.length) spanDays = Math.max(1, (now - dates[0]) / 86400000);
+    else spanDays = 1;
+    const months = Math.max(1 / 30, spanDays / 30);
+
+    // 1. Volume
+    const daysSinceLast = dates.length ? Math.round((now - dates[dates.length - 1]) / 86400000) : null;
+    let longestGap = null;
+    for (let i = 1; i < dates.length; i++) {
+      const gap = (dates[i] - dates[i - 1]) / 86400000;
+      if (longestGap === null || gap > longestGap) longestGap = gap;
+    }
+
+    // 2. Type breakdown
+    const typeCounts = {};
+    dated.forEach(({ cv }) => { const t = cvType(cv); typeCounts[t] = (typeCounts[t] || 0) + 1; });
+
+    // 3. Inbound vs outbound — inferred. Prefer explicit direction, then the
+    // author of the first message part, then a coarse enduser/user fallback.
+    let inbound = 0, outbound = 0, undetermined = 0;
+    const authorSide = (raw) => {
+      const s = String(raw || '').toLowerCase();
+      if (/end|customer|contact|client/.test(s)) return 'in';
+      if (/user|agent|csm|team|owner|staff|rep/.test(s)) return 'out';
+      return '';
+    };
+    dated.forEach(({ cv }) => {
+      const dir = String(cv.direction || cv.source || '').toLowerCase();
+      if (/inbound|received|incoming/.test(dir) || dir === 'in' || dir === 'bcc') { inbound++; return; }
+      if (/outbound|sent|outgoing/.test(dir) || dir === 'out') { outbound++; return; }
+      // First message part's author tells us who started it
+      const hist = Array.isArray(cv.history) ? cv.history : [];
+      const parts = hist
+        .map((h) => ({ t: new Date(h.date || h.createDate || h.time).getTime(), by: h.fromType || h.by || h.author || h.from }))
+        .filter((p) => !isNaN(p.t)).sort((a, b) => a.t - b.t);
+      let side = parts.length ? authorSide(parts[0].by) : '';
+      if (!side) {
+        // Fallback: an owner flag on users often marks CSM-initiated logging
+        const hasEnd = Array.isArray(cv.endusers) && cv.endusers.length;
+        const hasUser = Array.isArray(cv.users) && cv.users.length;
+        if (hasEnd && !hasUser) side = 'in';
+        else if (hasUser && !hasEnd) side = 'out';
+      }
+      if (side === 'in') inbound++;
+      else if (side === 'out') outbound++;
+      else undetermined++;
+    });
+    const inOutRatio = outbound ? (inbound / outbound) : null;
+
+    // 4. Support load
+    const supportItems = dated.filter(({ cv }) => SUPPORT_RE.test(cvType(cv)) || SUPPORT_RE.test(cvText(cv)));
+    const supportTotal = supportItems.length;
+    const last30 = dated.filter(({ d }) => (now - d) <= 30 * 86400000);
+    const prev90 = dated.filter(({ d }) => (now - d) > 30 * 86400000 && (now - d) <= 120 * 86400000);
+    const sup30 = last30.filter(({ cv }) => SUPPORT_RE.test(cvType(cv)) || SUPPORT_RE.test(cvText(cv))).length;
+    const supPrev90Avg30 = prev90.length
+      ? (prev90.filter(({ cv }) => SUPPORT_RE.test(cvType(cv)) || SUPPORT_RE.test(cvText(cv))).length / 3)
+      : 0;
+    const supportSpike = supPrev90Avg30 ? (sup30 / supPrev90Avg30) : (sup30 ? Infinity : 0);
+    // Consecutive support conversations (max run in chronological order)
+    let maxRun = 0, run = 0;
+    dated.forEach(({ cv }) => {
+      if (SUPPORT_RE.test(cvType(cv)) || SUPPORT_RE.test(cvText(cv))) { run++; maxRun = Math.max(maxRun, run); }
+      else run = 0;
+    });
+
+    // 5. Response time — needs per-part timestamps in history[]. Compute where present.
+    const firstResp = [], custDelay = [], csmDelay = [], respAll = [];
+    let longestUnanswered = null;
+    dated.forEach(({ cv }) => {
+      const hist = Array.isArray(cv.history) ? cv.history.slice() : [];
+      const parts = hist
+        .map((h) => ({ t: new Date(h.date || h.createDate || h.time).getTime(), by: (h.fromType || h.by || h.author || '') }))
+        .filter((p) => !isNaN(p.t)).sort((a, b) => a.t - b.t);
+      for (let i = 1; i < parts.length; i++) {
+        const gapH = (parts[i].t - parts[i - 1].t) / 3600000;
+        respAll.push(gapH);
+        if (i === 1) firstResp.push(gapH);
+        const who = String(parts[i - 1].by).toLowerCase();
+        if (/user|agent|csm|team|owner/.test(who)) custDelay.push(gapH); // customer replying to us
+        else if (/end|customer|contact/.test(who)) csmDelay.push(gapH);  // us replying to customer
+      }
+      // Unanswered: open thread whose last part is from the customer
+      if (cv.isOpen && parts.length) {
+        const lastBy = String(parts[parts.length - 1].by).toLowerCase();
+        if (/end|customer|contact/.test(lastBy)) {
+          const ageH = (now - parts[parts.length - 1].t) / 3600000;
+          if (longestUnanswered === null || ageH > longestUnanswered) longestUnanswered = ageH;
+        }
+      }
+    });
+    const avg = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+    const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+    // 6. Customer effort
+    const msgsPer = dated.map(({ cv }) => Number(cv.numberOfParts || (Array.isArray(cv.history) ? cv.history.length : 1)) || 1);
+    const avgMsgs = avg(msgsPer);
+    const lengths = [];
+    dated.forEach(({ cv }) => { const s = (cv.snippet || cv.subject || ''); if (s) lengths.push(s.length); });
+    const avgLen = avg(lengths);
+
+    // 7. Escalation keyword counts
+    const esc = {};
+    Object.keys(KW).forEach((k) => { esc[k] = dated.filter(({ cv }) => KW[k].test(cvText(cv))).length; });
+
+    // 8. Relationship
+    const contacts = new Set(), team = new Set();
+    let meetingAttendees = [], meetings = 0;
+    dated.forEach(({ cv }) => {
+      (cv.endusers || []).forEach((e) => contacts.add(e.id || e._id || e.name));
+      (cv.users || []).forEach((u) => team.add(u.id || u._id || u.name));
+      const t = cvType(cv);
+      if (/meeting|call|review|qbr|training/.test(t)) {
+        meetings++;
+        meetingAttendees.push((cv.endusers || []).length + (cv.users || []).length);
+      }
+    });
+    const avgAttendees = meetingAttendees.length ? avg(meetingAttendees) : null;
+    const singleThreaded = contacts.size <= 1;
+
+    // 9. Success meetings
+    const successMeetings = dated.filter(({ cv }) => SUCCESS_RE.test(cvType(cv)) || SUCCESS_RE.test(cvText(cv))).length;
+
+    return {
+      total, months, spanDays,
+      volume: {
+        avgPerMonth: total / months,
+        total,
+        daysSinceLast,
+        longestGap: longestGap === null ? null : Math.round(longestGap),
+      },
+      types: typeCounts,
+      inout: { inbound, outbound, undetermined, ratio: inOutRatio },
+      support: {
+        total: supportTotal,
+        perMonth: supportTotal / months,
+        spike: supportSpike,
+        sup30, supPrev90Avg30,
+        pct: total ? (supportTotal / total * 100) : 0,
+        maxConsecutive: maxRun,
+      },
+      response: {
+        firstResp: avg(firstResp), custDelay: avg(custDelay), csmDelay: avg(csmDelay),
+        longestUnanswered, median: median(respAll), hasData: respAll.length > 0,
+      },
+      effort: { avgMsgs, avgLen },
+      escalation: esc,
+      relationship: {
+        contacts: contacts.size, team: team.size,
+        avgAttendees, singleThreaded, meetings,
+      },
+      success: successMeetings,
+    };
+  }
+
+  // ---------- Drawer render ----------
+  let drawerReqId = 0;
+  async function openHealthDrawer(company) {
+    const id = company._id || company.id;
+    els.drawerName.textContent = company.name || '(unnamed)';
+    const range = resolveRange();
+    els.drawerMeta.innerHTML = `${esc(csmOf(company) || 'No CSM')} · ${esc(localeOf(company) || '—')} · health data: ${esc(range.label)}`;
+    els.drawerBody.innerHTML = `<div class="drawer-loading"><div class="spinner"></div><div>Loading conversations…</div></div>`;
+    els.drawer.classList.add('open');
+    els.drawerScrim.classList.add('open');
+    els.drawer.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+
+    if (!id) {
+      els.drawerBody.innerHTML = `<div class="drawer-error">This record has no Planhat company ID, so its conversations can't be fetched.</div>`;
+      return;
+    }
+    const myReq = ++drawerReqId;
+    try {
+      const convos = await fetchConversations(id, range);
+      if (myReq !== drawerReqId) return;
+      const allConvos = range.from ? await fetchConversations(id, { from: null, to: new Date(), label: 'all time' }) : convos;
+      if (myReq !== drawerReqId) return;
+      const m = computeHealth(convos, range, company);
+      els.drawerBody.innerHTML = renderLicenceDiag(company) + renderStrategyDiag(allConvos, company, range) + renderHealth(m, range);
+    } catch (err) {
+      if (myReq !== drawerReqId) return;
+      els.drawerBody.innerHTML = `<div class="drawer-error">Couldn't load conversations: ${esc(err.message)}</div>`;
+      log('Health drawer error: ' + err.message);
+    }
+  }
+
+  // Prominent, in-drawer diagnostic for the strategy-session detection.
+  function renderLicenceDiag(company) {
+    const ls = licensesByCompany.get(company._id || company.id) || [];
+    if (!ls.length) return '';  // no licence records — nothing to show
+    const items = renewalItemsOf(company);
+    const rows = ls.map((l) => {
+      const d = licDate(l);
+      const cls = licRenewed(l) ? 'renewed (won)' : licLost(l) ? 'lost/churn' : 'outstanding';
+      const col = licRenewed(l) ? 'var(--accent)' : licLost(l) ? 'var(--red)' : 'var(--amber)';
+      return `<tr>
+        <td>${esc(licLabel(l) || '(unnamed)')}</td>
+        <td class="num">${fmtEur(licMrr(l))}</td>
+        <td class="num">${l.renewalDaysFromNow != null ? l.renewalDaysFromNow + 'd' : '—'}</td>
+        <td class="num">${d ? fmtDate(d) : '—'}</td>
+        <td>${esc(licRenewalStatus(l) || '—')}</td>
+        <td style="color:${col}">${cls}</td>
+      </tr>`;
+    }).join('');
+    // Upsell-signal explorer: surface the fields we'd need to detect upsells —
+    // per-licence start dates (for "new licence mid-term") and any MRR-history
+    // fields (for "MRR increase on renewal").
+    const startFieldKeys = ls[0] ? Object.keys(ls[0]).filter((k) => /start|from|createdat|created|begin/i.test(k)) : [];
+    const mrrHistKeys = ls[0] ? Object.keys(ls[0]).filter((k) => /mrr|arr|value|previous|prior|last.*(mrr|value)|history/i.test(k)) : [];
+    const startDump = ls.map((l) => {
+      const sk = startFieldKeys.find((k) => l[k] != null);
+      return `${esc(licLabel(l) || '(unnamed)')}: ${sk ? esc(sk) + '=' + esc(String(l[sk])) : 'no start field'}`;
+    }).join(' · ');
+    const mrrDump = ls[0] ? mrrHistKeys.map((k) => `${esc(k)}=${esc(String(ls[0][k]))}`).join(' | ') : '';
+
+    return `<div class="mgroup" style="border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;background:#0d1830">
+      <h3 style="margin-top:0">⚙ Licences (Revenue) — ${ls.length}, ${items.length} counted for renewals</h3>
+      <div class="tablewrap"><table style="font-size:.8rem">
+        <thead><tr><th>Product</th><th style="text-align:right">MRR</th><th style="text-align:right">Days→renewal</th><th style="text-align:right">Renewal date</th><th>Renewal Status (read)</th><th>Classification</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+      <p class="note-inline" style="color:var(--accent)"><strong>Upsell signals — start dates per licence:</strong> ${startDump || 'none found'}</p>
+      <p class="note-inline" style="color:var(--accent)"><strong>Upsell signals — MRR/history fields on first licence:</strong> ${mrrDump || 'only current MRR found (no history/previous field → can\'t detect MRR increase from licence alone)'}</p>
+      <details style="margin-top:.4rem"><summary style="cursor:pointer;color:var(--muted);font-size:.78rem">First licence (raw JSON)</summary>
+      <pre style="font-size:.72rem;white-space:pre-wrap;color:#b9c6e0;max-height:240px;overflow:auto">${esc(JSON.stringify(ls[0], null, 2).slice(0, 2500))}</pre></details>
+    </div>`;
+  }
+
+  function renderStrategyDiag(allConvos, company, range) {
+    const sessions = allConvos.filter(isStrategySession);
+    let last = null;
+    sessions.forEach((cv) => { const d = cvCreatedDate(cv); if (d && (!last || d > last)) last = d; });
+    const types = {};
+    allConvos.forEach((cv) => { const t = cv.type ?? '(none)'; types[t] = (types[t] || 0) + 1; });
+    const typeList = Object.entries(types).sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `${esc(t)} ×${n}`).join(', ') || 'none';
+    const { isPremium, cadence } = planClass(company);
+
+    let verdict, cls;
+    if (allConvos.length === 0) { verdict = 'No conversations returned by the API for this company (all-time fetch). This is a fetch/permissions issue, not a matching one.'; cls = 'bad'; }
+    else if (sessions.length === 0) { verdict = `${allConvos.length} conversations fetched, but none matched as a strategy session.`; cls = 'warn'; }
+    else { verdict = `${sessions.length} strategy session(s) found. Last was ${fmtDate(last)}.`; cls = 'good'; }
+
+    return `<div class="mgroup" style="border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;background:#0d1830">
+      <h3 style="margin-top:0">⚙ Strategy-session diagnostic</h3>
+      <div class="stat" style="margin-bottom:.6rem"><div class="v ${cls}" style="font-size:.95rem">${esc(verdict)}</div></div>
+      <div class="mgrid">
+        ${stat(allConvos.length, 'Conversations (all-time)')}
+        ${stat(sessions.length, 'Strategy sessions matched')}
+        ${stat(last ? fmtDate(last) : 'never', 'Last session (createdAt)')}
+        ${stat(isPremium ? 'Premium' : 'Standard', `Plan → ${cadence}mo cadence`)}
+      </div>
+      <p class="note-inline" style="margin-top:.5rem">Conversation types seen: ${typeList}</p>
+      ${sessions.length ? `<p class="note-inline">Matched sessions: ${sessions.slice(0, 8).map((cv) => `${esc(cv.subject || '(no subject)')} — ${fmtDate(cvCreatedDate(cv))}`).join(' · ')}</p>` : ''}
+    </div>`;
+  }
+
+  const stat = (v, k, cls = '') => `<div class="stat"><div class="v ${cls}">${v}</div><div class="k">${k}</div></div>`;
+  const hrs = (h) => h === null || h === undefined ? '—' : (h < 1 ? Math.round(h * 60) + ' min' : (h < 48 ? h.toFixed(1) + ' h' : Math.round(h / 24) + ' d'));
+  const num1 = (v) => v === null || v === undefined || isNaN(v) ? '—' : Number(v).toFixed(1);
+
+  function renderHealth(m, range) {
+    if (!m.total) {
+      return `<div class="drawer-error">No conversations found for this customer in ${esc(range.label)}.</div>`;
+    }
+    const typeRows = Object.entries(m.types).sort((a, b) => b[1] - a[1]);
+    const typeMax = Math.max(...typeRows.map((r) => r[1]));
+    const spikeCls = m.support.spike === Infinity ? 'bad' : m.support.spike >= 2 ? 'bad' : m.support.spike >= 1.3 ? 'warn' : 'good';
+    const spikeTxt = m.support.spike === Infinity ? 'new' : m.support.spike ? m.support.spike.toFixed(1) + '×' : '—';
+
+    return `
+    <div class="mgroup"><h3>1 · Volume</h3><div class="mgrid">
+      ${stat(num1(m.volume.avgPerMonth), 'Avg conversations / month')}
+      ${stat(m.volume.total, 'Total in period')}
+      ${stat(m.volume.daysSinceLast ?? '—', 'Days since last', m.volume.daysSinceLast > 30 ? 'warn' : '')}
+      ${stat(m.volume.longestGap ?? '—', 'Longest gap (days)', m.volume.longestGap > 45 ? 'warn' : '')}
+    </div></div>
+
+    <div class="mgroup"><h3>2 · Conversation types</h3><div class="breakdown">
+      ${typeRows.map(([t, n]) => `<div class="row"><span class="lbl">${esc(t)}</span><span class="val">${n} (${Math.round(n / m.total * 100)}%)</span>
+        <span class="bar-wrap"><span class="bar-fill" style="width:${Math.round(n / typeMax * 100)}%"></span></span></div>`).join('')}
+    </div></div>
+
+    <div class="mgroup"><h3>3 · Inbound vs outbound</h3><div class="mgrid">
+      ${stat(m.inout.inbound, 'Customer-initiated')}
+      ${stat(m.inout.outbound, 'CSM-initiated')}
+      ${stat(m.inout.ratio === null ? '—' : m.inout.ratio.toFixed(2), 'In : out ratio')}
+    </div>${m.inout.undetermined ? `<p class="note-inline">${m.inout.undetermined} conversation(s) had no clear direction and were excluded from the ratio.</p>` : ''}
+    <p class="note-inline">Direction is inferred from message metadata; manually-logged items may not carry it.</p></div>
+
+    <div class="mgroup"><h3>4 · Support load</h3><div class="mgrid">
+      ${stat(m.support.total, 'Total support conversations')}
+      ${stat(num1(m.support.perMonth), 'Support / month')}
+      ${stat(spikeTxt, 'Spike (30d vs prior 90d avg)', spikeCls)}
+      ${stat(Math.round(m.support.pct) + '%', '% of all conversations')}
+      ${stat(m.support.maxConsecutive, 'Longest support streak', m.support.maxConsecutive >= 4 ? 'warn' : '')}
+    </div></div>
+
+    <div class="mgroup"><h3>5 · Response time</h3>${m.response.hasData ? `<div class="mgrid">
+      ${stat(hrs(m.response.firstResp), 'Avg first response')}
+      ${stat(hrs(m.response.custDelay), 'Avg customer reply delay')}
+      ${stat(hrs(m.response.csmDelay), 'Avg CSM reply delay')}
+      ${stat(hrs(m.response.longestUnanswered), 'Longest unanswered', m.response.longestUnanswered > 72 ? 'bad' : '')}
+      ${stat(hrs(m.response.median), 'Median response')}
+    </div>` : `<p class="note-inline">No per-message timestamps in this customer's conversations, so response times can't be computed. This data comes from synced email/ticket threads.</p>`}</div>
+
+    <div class="mgroup"><h3>6 · Customer effort</h3><div class="mgrid">
+      ${stat(num1(m.effort.avgMsgs), 'Avg messages / conversation')}
+      ${stat(m.effort.avgLen === null ? '—' : Math.round(m.effort.avgLen), 'Avg message length (chars)')}
+      ${stat('—', 'Sentiment')}
+    </div><p class="note-inline">Sentiment needs an AI pass over message text — not computed here. I can add a "Score sentiment" button that runs it on demand.</p></div>
+
+    <div class="mgroup"><h3>7 · Escalation indicators</h3><div class="mgrid">
+      ${['escalation', 'urgent', 'critical', 'executive', 'complaint'].map((k) =>
+        stat(m.escalation[k], k[0].toUpperCase() + k.slice(1), m.escalation[k] > 0 ? (k === 'complaint' || k === 'critical' ? 'bad' : 'warn') : '')).join('')}
+    </div><p class="note-inline">Counts conversations whose subject/snippet contains each keyword.</p></div>
+
+    <div class="mgroup"><h3>8 · Relationship</h3><div class="mgrid">
+      ${stat(m.relationship.contacts, 'Unique customer contacts', m.relationship.singleThreaded ? 'bad' : '')}
+      ${stat(m.relationship.team, 'Unique internal members')}
+      ${stat(m.relationship.avgAttendees === null ? '—' : num1(m.relationship.avgAttendees), 'Avg attendees / meeting')}
+      ${stat(m.relationship.singleThreaded ? 'Yes ⚠' : 'No', 'Single-threaded?', m.relationship.singleThreaded ? 'bad' : 'good')}
+    </div></div>
+
+    <div class="mgroup"><h3>9 · Success meetings</h3><div class="mgrid">
+      ${stat(m.success, 'Strategic reviews / advisories / training', m.success === 0 ? 'warn' : 'good')}
+    </div><p class="note-inline">Conversations of type or subject matching reviews, QBRs, advisories, training, kickoff/onboarding.</p></div>
+    `;
+  }
+
+  function closeDrawer() {
+    els.drawer.classList.remove('open');
+    els.drawerScrim.classList.remove('open');
+    els.drawer.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    drawerReqId++; // cancel any in-flight fetch's render
+  }
+  els.drawerClose.addEventListener('click', closeDrawer);
+  els.drawerScrim.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+
+  // ---------- Churned-accounts popup ----------
+  function openChurnModal() {
+    const list = churnedYtdList;
+    els.churnModalTitle.textContent = `Churned this year — ${list.length}`;
+    if (!list.length) {
+      els.churnModalBody.innerHTML = '<p class="hint" style="margin:.5rem 0">No accounts churned this year for the current filters.</p>';
+    } else {
+      const items = list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((c) => {
+        // Show the lost licence(s) that qualified this account, for debugging.
+        const ls = licensesByCompany.get(c._id || c.id) || [];
+        const yr = new Date().getFullYear();
+        const lost = ls.filter((l) => licLost(l) && licEnd(l) && licEnd(l).getFullYear() === yr);
+        const sub = lost.map((l) => `${esc(licLabel(l) || 'licence')} · ended ${fmtDate(licEnd(l))} · ${fmtEur(licMrr(l))}`).join('<br>');
+        return `<li>${nameLink(c, c.name || '—')}${sub ? `<div class="co-sub">${sub}</div>` : ''}</li>`;
+      }).join('');
+      els.churnModalBody.innerHTML = `<ul>${items}</ul>`;
+    }
+    els.churnScrim.hidden = false;
+    els.churnModal.hidden = false;
+  }
+  function closeChurnModal() {
+    els.churnScrim.hidden = true;
+    els.churnModal.hidden = true;
+  }
+  function openNewModal() {
+    const list = newYtdList;
+    els.churnModalTitle.textContent = `New accounts this year — ${list.length}`;
+    if (!list.length) {
+      els.churnModalBody.innerHTML = '<p class="hint" style="margin:.5rem 0">No new accounts this year for the current filters.</p>';
+    } else {
+      const yr = new Date().getFullYear();
+      const items = list.slice().sort((a, b) => String(a.name).localeCompare(String(b.name))).map((c) => {
+        // Show the new licence(s) that qualified this account, for debugging.
+        const newLics = newLicencesThisYear(c);
+        const sub = newLics.map((l) => `${esc(licLabel(l) || 'licence')} · started ${fmtDate(licStart(l))} · ${fmtEur(licMrr(l))}`).join('<br>');
+        return `<li>${nameLink(c, c.name || '—')}${sub ? `<div class="co-sub">${sub}</div>` : ''}</li>`;
+      }).join('');
+      els.churnModalBody.innerHTML = `<ul>${items}</ul>`;
+    }
+    els.churnScrim.hidden = false;
+    els.churnModal.hidden = false;
+  }
+  function openUpsellModal() {
+    const list = upsellYtdList;
+    els.churnModalTitle.textContent = `Upsells this year — ${list.length}`;
+    if (!list.length) {
+      els.churnModalBody.innerHTML = '<p class="hint" style="margin:.5rem 0">No upsells this year for the current filters.</p>';
+    } else {
+      const items = list.slice().sort((a, b) => b.delta - a.delta).map((e) => {
+        const kind = e.type === 'uplift' ? 'Uplift' : 'New feature';
+        const sub = `${kind} · ${esc(e.label)} · started ${fmtDate(e.start)} · +${fmtEur(e.delta)}`;
+        return `<li>${nameLink(e.c, e.c.name || '—')}<div class="co-sub">${sub}</div></li>`;
+      }).join('');
+      els.churnModalBody.innerHTML = `<ul>${items}</ul>`;
+    }
+    els.churnScrim.hidden = false;
+    els.churnModal.hidden = false;
+  }
+  els.mChurnedMetric.addEventListener('click', openChurnModal);
+  els.mChurnedMetric.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openChurnModal(); } });
+  els.mNewMetric.addEventListener('click', openNewModal);
+  els.mNewMetric.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNewModal(); } });
+  els.mUpsellMetric.addEventListener('click', openUpsellModal);
+  els.mUpsellMetric.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUpsellModal(); } });
+  els.churnModalClose.addEventListener('click', closeChurnModal);
+  els.churnScrim.addEventListener('click', closeChurnModal);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChurnModal(); });
+
+  // Growth-row collapse toggle
+  els.growthToggle.addEventListener('click', () => {
+    const open = els.growthRow.hidden;
+    els.growthRow.hidden = !open;
+    els.growthToggle.setAttribute('aria-expanded', String(open));
+    els.growthToggle.textContent = open ? 'Growth ▾' : 'Growth ▸';
+  });
+
+  // ---------- Run on load ----------
+  startup();
+})();
+</script>
+</body>
+</html>
